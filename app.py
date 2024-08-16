@@ -118,6 +118,13 @@ elif page == "Text Search":
     # Search functionality at the top
     search_query = st.text_input("Search text in extracted content", value="", placeholder="Type to search...")
 
+    # Display the number of found words
+    if search_query and st.session_state['extracted_texts']:
+        word_count = 0
+        for text in st.session_state['extracted_texts']:
+            word_count += len(re.findall(re.escape(search_query), text, re.IGNORECASE))
+        st.write(f"Number of occurrences of the search query: {word_count}")
+
     # Button to display extracted text
     if st.session_state['extracted_texts']:
         if st.button("Show Extracted Texts"):
