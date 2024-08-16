@@ -22,4 +22,5 @@ def save_text_to_word(texts, pdf_filename):
 
     # Save the document to the specified path
     doc.save(word_file_path)
+
     return word_file_path
