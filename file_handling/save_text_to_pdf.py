@@ -1,29 +1,23 @@
-from fpdf import FPDF
-import os
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib import fonts
+from reportlab.lib.fonts import tt2ps
 
 
-def save_text_to_pdf(texts, pdf_filename):
-    # Determine the output directory relative to the script file
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_dir = os.path.join(script_dir, 'output')
+def save_text_to_pdf(extracted_texts, uploaded_filename):
+    pdf_file_path = uploaded_filename.replace(".pdf", "_converted.pdf")
 
-    # Create the output directory if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    c = canvas.Canvas(pdf_file_path, pagesize=letter)
+    width, height = letter
 
-    # Define the path for the PDF file
-    base_name = os.path.splitext(pdf_filename)[0]
-    pdf_file_path = os.path.join(output_dir, f"{base_name}.pdf")
+    for text in extracted_texts:
+        c.setFont("Helvetica", 12)
+        text_object = c.beginText(40, height - 40)
+        text_object.setTextOrigin(40, height - 40)
+        text_object.textLines(text)
+        c.drawText(text_object)
+        c.showPage()
 
-    # Create a new PDF document
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    c.save()
 
-    for i, text in enumerate(texts):
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, text)
-
-    # Save the document to the specified path
-    pdf.output(pdf_file_path)
     return pdf_file_path
