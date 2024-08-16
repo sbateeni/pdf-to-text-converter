@@ -1,4 +1,4 @@
-# PDF to Image Converter
+# PDF to text Converter
 
 This project converts PDF files to images, extracts text using OCR, and saves the extracted text to Word or PDF files.
 
