@@ -1,26 +1,22 @@
+# file_handling/save_text_to_word.py
+
 from docx import Document
-import os
 
-def save_text_to_word(texts, pdf_filename):
-    # Determine the output directory relative to the script file
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_dir = os.path.join(script_dir, 'output')
 
-    # Create the output directory if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Define the path for the Word file
-    base_name = os.path.splitext(pdf_filename)[0]
-    word_file_path = os.path.join(output_dir, f"{base_name}.docx")
-
-    # Create a new Word document
+def save_text_to_word(extracted_texts, uploaded_filename, search_query=""):
     doc = Document()
-    for i, text in enumerate(texts):
+    for i, text in enumerate(extracted_texts):
         doc.add_heading(f'Page {i + 1}', level=1)
-        doc.add_paragraph(text)
+        if search_query:
+            # Highlight search_query in the text
+            highlighted_text = text.replace(search_query, f'**{search_query}**')
+            doc.add_paragraph(highlighted_text)
+        else:
+            doc.add_paragraph(text)
 
-    # Save the document to the specified path
+    # Save the Word document
+    word_filename = uploaded_filename.replace(".pdf", ".docx")
+    word_file_path = f"temp_{word_filename}"
     doc.save(word_file_path)
 
     return word_file_path
