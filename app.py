@@ -58,8 +58,15 @@ if page == "Converter":
                     images = convert_from_path(temp_file_path, first_page=page_range[0],
                                                last_page=page_range[-1]) if page_range else convert_from_path(temp_file_path)
 
+                    # Initialize progress bar
+                    progress_bar = st.progress(0)
                     extracted_texts = []
+                    total_pages = len(images)
+
                     for i, image in enumerate(images):
+                        # Update progress bar
+                        progress_bar.progress((i + 1) / total_pages)
+
                         text = pytesseract.image_to_string(image, lang=lang_code)
                         if spell_check and lang_code == 'eng':
                             text = correct_spelling(text, lang_code)
@@ -75,6 +82,7 @@ if page == "Converter":
                             st.image(image, caption=f"Page {i + 1}")
 
                     st.success("Conversion completed!")
+                    progress_bar.empty()
 
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
