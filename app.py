@@ -1,5 +1,5 @@
 import streamlit as st
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, NamedTemporaryFile
 import os
 import re
 from pdf2image import convert_from_path
@@ -10,18 +10,19 @@ from poppler_utils import setup_poppler
 from text_processing.correct_spelling import correct_spelling
 from file_handling.save_text_to_word import save_text_to_word
 from file_handling.save_text_to_pdf import save_text_to_pdf
+from pdf2docx import Converter
 
 # Setup Poppler and Tesseract
 setup_poppler()
 setup_tesseract(['eng', 'ara', 'spa'])
 
 # Streamlit app setup
-st.title("PDF to Image Converter")
-st.markdown("Convert PDF files to images and extract text")
+st.title("PDF Converter and Text Extractor")
+st.markdown("Convert PDF files to images, extract text, and convert to Word.")
 
 # Sidebar for navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Converter", "Text Search"])
+page = st.sidebar.radio("Go to", ["Image and Text Converter", "Text Search", "PDF to Word Converter"])
 
 # Initialize session state for images and text
 if 'extracted_images' not in st.session_state:
@@ -29,9 +30,20 @@ if 'extracted_images' not in st.session_state:
 if 'extracted_texts' not in st.session_state:
     st.session_state['extracted_texts'] = []
 
-if page == "Converter":
-    # Create a file uploader
-    uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"])
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf'}
+
+def convert_pdf_to_word(pdf_file_path, word_file_path):
+    cv = Converter(pdf_file_path)
+    cv.convert(word_file_path, start=0, end=None)
+    cv.close()
+
+# Ensure the download folder exists
+os.makedirs('downloads', exist_ok=True)
+
+if page == "Image and Text Converter":
+    # Create a file uploader with drag-and-drop support
+    uploaded_file = st.file_uploader("Choose a PDF file or drag and drop here", type=["pdf"])
 
     # Create a selectbox for language
     language = st.selectbox("Select language", ["English", "Arabic", "Spanish"])
@@ -54,9 +66,9 @@ if page == "Converter":
                     temp_file.write(uploaded_file.read())
 
                 try:
+                    # Handle page range input
                     page_range = [int(x) for x in page_range.replace("-", ",").split(",")] if page_range else None
-                    images = convert_from_path(temp_file_path, first_page=page_range[0],
-                                               last_page=page_range[-1]) if page_range else convert_from_path(temp_file_path)
+                    images = convert_from_path(temp_file_path, first_page=page_range[0], last_page=page_range[-1]) if page_range else convert_from_path(temp_file_path)
 
                     # Initialize progress bar
                     progress_bar = st.progress(0)
@@ -147,3 +159,36 @@ elif page == "Text Search":
         st.session_state['extracted_texts'] = []
         st.session_state['extracted_images'] = []
         st.success("Text has been cleared.")
+
+elif page == "PDF to Word Converter":
+    st.title("PDF to Word Converter")
+
+    # Upload PDF file
+    uploaded_pdf = st.file_uploader("Choose a PDF file to convert to Word", type=["pdf"])
+
+    if uploaded_pdf:
+        if allowed_file(uploaded_pdf.name):
+            # Save the uploaded PDF to a temporary file
+            with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+                temp_file.write(uploaded_pdf.read())
+                temp_file_path = temp_file.name
+
+            # Convert PDF to Word
+            word_filename = uploaded_pdf.name.rsplit('.', 1)[0] + '.docx'
+            word_file_path = os.path.join('downloads', word_filename)
+
+            # Ensure the download folder exists
+            os.makedirs('downloads', exist_ok=True)
+
+            convert_pdf_to_word(temp_file_path, word_file_path)
+
+            # Provide download link for the converted file
+            st.success("Conversion completed!")
+            with open(word_file_path, "rb") as f:
+                st.download_button(
+                    label="Download Word File",
+                    data=f,
+                    file_name=os.path.basename(word_file_path)
+                )
+        else:
+            st.error("Invalid file format. Please upload a PDF file.")
