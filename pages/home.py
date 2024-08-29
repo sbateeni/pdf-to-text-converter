@@ -1,11 +1,12 @@
 import streamlit as st
 import os
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, NamedTemporaryFile
 from pdf2image import convert_from_path
 from pytesseract import pytesseract
 from text_processing.correct_spelling import correct_spelling
 from ocr_utils import setup_tesseract
 from poppler_utils import setup_poppler
+from pages.utils import allowed_file, save_text_to_word, convert_pdf_to_word
 
 # Setup Poppler and Tesseract
 setup_poppler()
@@ -94,7 +95,6 @@ def show():
     with col2:
         if st.button("📝 Convert PDF to Word"):
             if uploaded_file:
-                from pages.utils import allowed_file, convert_pdf_to_word
                 if allowed_file(uploaded_file.name):
                     with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                         temp_file.write(uploaded_file.read())
@@ -103,14 +103,20 @@ def show():
                     word_filename = uploaded_file.name.rsplit('.', 1)[0] + '.docx'
                     word_file_path = os.path.join('downloads', word_filename)
                     os.makedirs('downloads', exist_ok=True)
-                    convert_pdf_to_word(temp_file_path, word_file_path)
 
-                    st.success("✅ Conversion completed!")
-                    with open(word_file_path, "rb") as f:
-                        st.download_button(
-                            label="📥 Download Word File",
-                            data=f,
-                            file_name=os.path.basename(word_file_path)
-                        )
+                    try:
+                        convert_pdf_to_word(temp_file_path, 'downloads')
+                        st.success("✅ Conversion completed!")
+
+                        with open(word_file_path, "rb") as f:
+                            st.download_button(
+                                label="📥 Download Word File",
+                                data=f,
+                                file_name=os.path.basename(word_file_path)
+                            )
+                    except Exception as e:
+                        st.error(f"❌ An error occurred: {e}")
                 else:
                     st.error("⚠️ Invalid file format. Please upload a PDF file.")
+            else:
+                st.error("⚠️ Please upload a PDF file.")

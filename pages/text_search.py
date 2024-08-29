@@ -30,5 +30,15 @@ def show():
                 st.markdown(highlighted_text, unsafe_allow_html=True)
         else:
             st.write("Please enter a search term.")
+
+        # Add button to show extracted text
+        if st.button("Show Extracted Text"):
+            for text in st.session_state['extracted_texts']:
+                st.write(text)
+
     else:
         st.error("⚠️ No text available to search. Please extract text first.")
+
+
+# Assuming this function is called to display the search page
+show()
