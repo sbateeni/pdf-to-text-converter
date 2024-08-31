@@ -8,7 +8,8 @@ def show():
         st.session_state['extracted_images'] = []
 
     if st.session_state['extracted_images']:
-        for i, image in enumerate(st.session_state['extracted_images']):
-            st.image(image, caption=f"Page {i + 1}")
+        if st.button("عرض الصور"):
+            for i, image in enumerate(st.session_state['extracted_images']):
+                st.image(image, caption=f"Page {i + 1}")
     else:
         st.error("⚠️ No images available. Please convert a PDF first.")

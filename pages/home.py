@@ -1,16 +1,32 @@
 import streamlit as st
 import os
-from tempfile import TemporaryDirectory, NamedTemporaryFile
+import time
+from tempfile import TemporaryDirectory
+from io import BytesIO  # تعديل هنا
 from pdf2image import convert_from_path
 from pytesseract import pytesseract
 from text_processing.correct_spelling import correct_spelling
 from ocr_utils import setup_tesseract
 from poppler_utils import setup_poppler
-from pages.utils import allowed_file, save_text_to_word, convert_pdf_to_word
+from pages.utils import convert_pdf_to_word
+from pdf2docx import Converter  # Added import for Converter class
 
 # Setup Poppler and Tesseract
 setup_poppler()
 setup_tesseract(['eng', 'ara', 'spa'])
+
+def pdf_to_word(pdf_file):
+    # Convert PDF file to Word
+    word_file = BytesIO()
+    with TemporaryDirectory() as temp_dir:
+        temp_file_path = os.path.join(temp_dir, "temp.pdf")
+        with open(temp_file_path, "wb") as temp_file:
+            temp_file.write(pdf_file.read())
+        cv = Converter(temp_file_path)
+        cv.convert(word_file, start=0, end=None)
+        cv.close()
+    word_file.seek(0)
+    return word_file
 
 def show():
     st.title("🏠 Home")
@@ -35,7 +51,7 @@ def show():
         lang_codes = [lang_code.get(language, '')]
 
     # Join lang_codes into a comma-separated string for pytesseract
-    lang_codes_str = ','.join(lang_codes)
+    lang_codes_str = '+'.join(lang_codes)  # Changed from ',' to '+'
 
     def extract_text_from_image(image):
         return pytesseract.image_to_string(image, lang=lang_codes_str)
@@ -65,11 +81,15 @@ def show():
                         images = convert_from_path(temp_file_path, first_page=page_range_list[0], last_page=page_range_list[-1]) if page_range_list else convert_from_path(temp_file_path)
 
                         progress_bar = st.progress(0)
+                        time_bar = st.empty()
                         extracted_texts = []
                         total_pages = len(images)
+                        start_time = time.time()
 
                         for i, image in enumerate(images):
                             progress_bar.progress((i + 1) / total_pages)
+                            elapsed_time = time.time() - start_time
+                            time_bar.info(f"⏱️ Time elapsed: {elapsed_time:.2f} seconds")
                             text = extract_text_from_image(image)
 
                             if spell_check and 'eng' in lang_codes:
@@ -86,6 +106,7 @@ def show():
 
                         st.success("✅ Conversion completed!")
                         progress_bar.empty()
+                        time_bar.empty()
 
                     except Exception as e:
                         st.error(f"❌ An error occurred: {e}")
@@ -95,28 +116,29 @@ def show():
     with col2:
         if st.button("📝 Convert PDF to Word"):
             if uploaded_file:
-                if allowed_file(uploaded_file.name):
-                    with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-                        temp_file.write(uploaded_file.read())
-                        temp_file_path = temp_file.name
-
-                    word_filename = uploaded_file.name.rsplit('.', 1)[0] + '.docx'
-                    word_file_path = os.path.join('downloads', word_filename)
-                    os.makedirs('downloads', exist_ok=True)
-
-                    try:
-                        convert_pdf_to_word(temp_file_path, 'downloads')
-                        st.success("✅ Conversion completed!")
-
-                        with open(word_file_path, "rb") as f:
-                            st.download_button(
-                                label="📥 Download Word File",
-                                data=f,
-                                file_name=os.path.basename(word_file_path)
-                            )
-                    except Exception as e:
-                        st.error(f"❌ An error occurred: {e}")
-                else:
-                    st.error("⚠️ Invalid file format. Please upload a PDF file.")
+                try:
+                    st.write("Processing...")
+                    
+                    start_time = time.time()
+                    time_bar = st.empty()
+                    
+                    word_file = pdf_to_word(uploaded_file)
+                    
+                    elapsed_time = time.time() - start_time
+                    time_bar.info(f"⏱️ Time elapsed: {elapsed_time:.2f} seconds")
+                    
+                    st.success("✅ Conversion completed!")
+                    
+                    st.download_button(
+                        label="📥 Download Word Document",
+                        data=word_file,
+                        file_name="converted.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                except Exception as e:
+                    st.error(f"❌ An error occurred during conversion: {str(e)}")
             else:
                 st.error("⚠️ Please upload a PDF file.")
+
+if __name__ == "__main__":
+    show()

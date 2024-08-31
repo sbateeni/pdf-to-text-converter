@@ -16,26 +16,10 @@ def show():
         st.session_state['extracted_texts'] = []
 
     if st.session_state['extracted_texts']:
-        search_term = st.text_input("Enter the text to search for")
-        if search_term:
-            matches = [text for text in st.session_state['extracted_texts'] if search_term.lower() in text.lower()]
-            st.write(f"Found {len(matches)} match(es):")
-            for match in matches:
-                # Display word count
-                word_count = len(match.split())
-                st.write(f"**Word Count:** {word_count}")
-
-                # Highlight search term
-                highlighted_text = highlight_search_term(match, search_term)
-                st.markdown(highlighted_text, unsafe_allow_html=True)
-        else:
-            st.write("Please enter a search term.")
-
         # Add button to show extracted text
-        if st.button("Show Extracted Text"):
+        if st.button("Show Extracted Text", key="show_extracted_text"):
             for text in st.session_state['extracted_texts']:
                 st.write(text)
-
     else:
         st.error("⚠️ No text available to search. Please extract text first.")
 

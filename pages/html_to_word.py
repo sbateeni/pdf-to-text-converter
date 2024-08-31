@@ -1,16 +1,34 @@
-import os
 import requests
 from bs4 import BeautifulSoup
-from tempfile import NamedTemporaryFile
-import pdfkit
 import streamlit as st
+import re
+from langdetect import detect
 
 def show():
-    st.title(" Convert HTML to PDF")
+    st.title("Fetch URL Content")
 
     url = st.text_input("Enter the URL of the webpage", placeholder="https://example.com")
 
-    def convert_url_to_pdf(url):
+    # Add language selection option
+    languages = ["Auto-detect", "English", "Arabic", "French", "Spanish", "German"]
+    selected_language = st.selectbox("Select Language", languages)
+
+    def clean_text(text):
+        # Remove control characters and NULL bytes
+        text = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]', '', text)
+        # Replace non-breaking spaces with regular spaces
+        text = text.replace('\xa0', ' ')
+        # Remove any HTML tags that might have been left
+        text = re.sub(r'<[^>]+>', '', text)
+        return text
+
+    def detect_language(text):
+        try:
+            return detect(text)
+        except:
+            return "unknown"
+
+    def fetch_url_content(url, selected_language):
         try:
             response = requests.get(url)
             response.raise_for_status()
@@ -24,36 +42,31 @@ def show():
             # Extract text and handle HTML entities
             text_content = soup.get_text(separator='\n', strip=True)
 
-            # Create a temporary file to save the PDF document
-            with NamedTemporaryFile(delete=False, suffix=".pdf", mode='wb') as temp_file:
-                pdf_file_path = temp_file.name
+            # Clean the text content
+            cleaned_text = clean_text(text_content)
 
-            # Specify the path to the wkhtmltopdf executable
-            wkhtmltopdf_path = "C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe"
+            # Detect or use selected language
+            if selected_language == "Auto-detect":
+                language = detect_language(cleaned_text)
+            else:
+                language = selected_language
 
-            # Save the text content to the PDF document
-            pdfkit.from_string(text_content, pdf_file_path, configuration=pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path))
-
-            return pdf_file_path
+            return cleaned_text, language
 
         except requests.exceptions.RequestException as e:
             st.error(f"An error occurred while fetching the URL: {e}")
-            return None
+            return None, None
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
-            return None
+            return None, None
 
-    if st.button("Convert URL to PDF"):
+    if st.button("Fetch URL Content"):
         if url:
-            pdf_file_path = convert_url_to_pdf(url)
-            if pdf_file_path:
-                st.success("The webpage has been converted to a PDF document!")
-                with open(pdf_file_path, "rb") as f:
-                    st.download_button(
-                        label="Download PDF File",
-                        data=f,
-                        file_name="converted_webpage.pdf"
-                    )
+            content, detected_language = fetch_url_content(url, selected_language)
+            if content:
+                st.success(f"The webpage content has been fetched! Language: {detected_language}")
+                st.subheader("Full Content:")
+                st.text_area("Fetched Content", content, height=300)
         else:
             st.warning("Please enter a valid URL.")
 
