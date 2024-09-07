@@ -2,14 +2,14 @@ import streamlit as st
 import os
 import time
 from tempfile import TemporaryDirectory
-from io import BytesIO  # تعديل هنا
+from io import BytesIO
 from pdf2image import convert_from_path
 from pytesseract import pytesseract
 from text_processing.correct_spelling import correct_spelling
 from ocr_utils import setup_tesseract
 from poppler_utils import setup_poppler
 from pages.utils import convert_pdf_to_word
-from pdf2docx import Converter  # Added import for Converter class
+from pdf2docx import Converter
 
 # Setup Poppler and Tesseract
 setup_poppler()
@@ -80,7 +80,7 @@ def show():
                         page_range_list = [int(x) for x in page_range.replace("-", ",").split(",")] if page_range else None
                         images = convert_from_path(temp_file_path, first_page=page_range_list[0], last_page=page_range_list[-1]) if page_range_list else convert_from_path(temp_file_path)
 
-                        progress_bar = st.progress(0)
+                        progress_bar = st.progress(0)  # شريط تقدم
                         time_bar = st.empty()
                         extracted_texts = []
                         total_pages = len(images)
@@ -139,6 +139,7 @@ def show():
                     st.error(f"❌ An error occurred during conversion: {str(e)}")
             else:
                 st.error("⚠️ Please upload a PDF file.")
+
 
 if __name__ == "__main__":
     show()

@@ -3,6 +3,7 @@ import tempfile
 from docx import Document
 from PyPDF2 import PdfFileReader
 import fitz  # PyMuPDF
+import streamlit as st  # Added for caching
 
 
 def allowed_file(filename):
@@ -28,15 +29,23 @@ def save_text_to_word(text_list, output_path):
         raise
 
 
+@st.cache_data
 def extract_text_from_pdf(pdf_path):
-    """Extract text from a PDF file."""
+    """Extract text from a PDF file with caching."""
+    cache_key = f"pdf_text_{pdf_path}"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+    
     text = ""
     with fitz.open(pdf_path) as doc:
         for page in doc:
             text += page.get_text()
+    
+    st.session_state[cache_key] = text  # تخزين النص في الحالة
     return text
 
 
+@st.cache_data
 def convert_pdf_to_word(pdf_path, output_dir):
     """Convert a PDF file to a Word document and save it in the specified output directory."""
     try:
@@ -54,3 +63,15 @@ def convert_pdf_to_word(pdf_path, output_dir):
     except Exception as e:
         print(f"❌ An error occurred during PDF to Word conversion: {str(e)}")
         return None
+
+
+def save_text_to_markdown(text_list, output_path):
+    """Save a list of texts to a Markdown file."""
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            for text in text_list:
+                f.write(f"{text}\n\n")
+        print(f"✅ Markdown document saved successfully at: {output_path}")
+    except Exception as e:
+        print(f"❌ Error in save_text_to_markdown: {str(e)}")
+        raise
