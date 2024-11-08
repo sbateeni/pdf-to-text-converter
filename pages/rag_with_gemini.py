@@ -5,7 +5,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 import google.generativeai as genai
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
@@ -62,15 +62,23 @@ def get_vector_store(text_chunks):
         logger.error(f"Error creating vector store: {str(e)}")
         raise
 
-def get_conversational_chain(vector_store):
-    prompt_template = """
-    Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
-    provided context just say, "answer is not available in the context", don't provide the wrong answer\n\n
-    Context:\n {context}?\n
-    Question: \n{question}\n
-
-    Answer:
+def generate_rag_prompt(query, context):
+    escaped = context.replace("'","").replace('"', "").replace("\n"," ")
+    prompt = f"""
+    You are a helpful and informative bot that answers questions using text from the reference context included below. 
+    Be sure to respond in a complete sentence, being comprehensive, including all relevant background information. 
+    However, you are talking to a non-technical audience, so be sure to break down complicated concepts and 
+    strike a friendly and conversational tone. 
+    If the context is irrelevant to the answer, you may ignore it.
+    QUESTION: '{query}'
+    CONTEXT: '{escaped}'
+    
+    ANSWER:
     """
+    return prompt
+
+def get_conversational_chain(vector_store):
+    prompt_template = generate_rag_prompt("{question}", "{context}")
     
     model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3, google_api_key=API_KEY)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
@@ -111,7 +119,7 @@ def user_input(user_question, original_language, vector_store):
             return None
 
 def save_conversation_to_file():
-    with open("conversation_log.txt", "w", encoding="utf-8") as f:
+    with open("conversation_log.txt", "w") as f:
         for message in st.session_state.messages:
             f.write(f"{message['role']}: {message['content']}\n")
 
