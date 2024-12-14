@@ -10,13 +10,10 @@ from PyPDF2 import PdfReader
 from textblob import TextBlob
 import arabic_reshaper
 from bidi.algorithm import get_display
-from pdf2docx import Converter
 import docx
 from langdetect import detect
-import cv2
 import numpy as np
 from mdutils.mdutils import MdUtils
-from htmldocx import HtmlToDocx
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -71,25 +68,21 @@ def detect_language(text):
 def enhance_image(image):
     """Enhance image quality for better OCR"""
     try:
-        # Convert PIL Image to OpenCV format
-        img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        # Apply basic PIL image enhancements
+        from PIL import ImageEnhance
         
-        # Apply image preprocessing
-        # 1. Convert to grayscale
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Convert to grayscale
+        img = image.convert('L')
         
-        # 2. Apply adaptive thresholding
-        binary = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-            cv2.THRESH_BINARY, 11, 2
-        )
+        # Enhance contrast
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(2.0)
         
-        # 3. Denoise
-        denoised = cv2.fastNlMeansDenoising(binary)
+        # Enhance sharpness
+        enhancer = ImageEnhance.Sharpness(img)
+        img = enhancer.enhance(1.5)
         
-        # Convert back to PIL Image
-        enhanced = Image.fromarray(denoised)
-        return enhanced
+        return img
     except Exception as e:
         logger.error(f"Error enhancing image: {str(e)}")
         return image
@@ -191,18 +184,15 @@ def correct_text(text, lang):
         logger.error(f"Error correcting text: {str(e)}")
         return text
 
-def convert_to_docx(pdf_path, output_path, page_numbers=None):
-    """Convert PDF to DOCX format"""
+def create_docx(text, output_path):
+    """Create a DOCX file from text"""
     try:
-        cv = Converter(pdf_path)
-        if page_numbers:
-            cv.convert(output_path, pages=page_numbers)
-        else:
-            cv.convert(output_path)
-        cv.close()
+        doc = docx.Document()
+        doc.add_paragraph(text)
+        doc.save(output_path)
         return True
     except Exception as e:
-        logger.error(f"Error converting to DOCX: {str(e)}")
+        logger.error(f"Error creating DOCX: {str(e)}")
         raise
 
 def main():
@@ -218,6 +208,7 @@ def main():
         st.page_link("pages/1_🔍_OCR.py", label="OCR Processing", icon="🔍")
         st.page_link("pages/2_📝_Text_Editor.py", label="Text Editor", icon="📝")
         st.page_link("pages/3_📊_Text_Analysis.py", label="Text Analysis", icon="📊")
+        st.page_link("pages/4_📑_Document_Analysis.py", label="Document Analysis", icon="📑")
         
         st.divider()
         st.write("Settings:")
@@ -371,15 +362,7 @@ def main():
                         # Prepare download buttons
                         if output_format == 'docx':
                             docx_path = Path(temp_dir) / "output.docx"
-                            if output_format == 'html':
-                                # Convert HTML to DOCX
-                                parser = HtmlToDocx()
-                                parser.parse_html_string(text, docx_path)
-                            else:
-                                # Create DOCX from text
-                                doc = docx.Document()
-                                doc.add_paragraph(text)
-                                doc.save(docx_path)
+                            create_docx(text, str(docx_path))
                             
                             with open(docx_path, "rb") as docx_file:
                                 st.download_button(
