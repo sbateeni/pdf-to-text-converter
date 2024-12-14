@@ -5,15 +5,15 @@ import logging
 import os
 import sys
 
-# إضافة المسار للوحدات
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(current_dir, 'src')
-sys.path.insert(0, src_dir)
+# Add project root to path
+project_root = os.path.dirname(os.path.abspath(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from utils.text_processing import format_text
-from utils.pdf_processing import extract_text_from_pdf, perform_ocr, convert_pdf_to_images_and_text
-from utils.file_handling import create_docx, format_output, save_uploaded_file
-from ui.components import (
+from src.utils.text_processing import format_text
+from src.utils.pdf_processing import extract_text_from_pdf, perform_ocr, convert_pdf_to_images_and_text
+from src.utils.file_handling import create_docx, format_output, save_uploaded_file
+from src.ui.components import (
     init_session_state,
     create_sidebar,
     create_processing_tabs,
@@ -101,7 +101,7 @@ def main():
                         
                         # Get pages to preview
                         if page_range:
-                            from utils.pdf_processing import parse_page_range
+                            from src.utils.pdf_processing import parse_page_range
                             preview_pages = parse_page_range(page_range, len(images))
                             for page_num in preview_pages:
                                 st.image(images[page_num], caption=f"Page {page_num + 1}")
