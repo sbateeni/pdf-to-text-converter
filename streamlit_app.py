@@ -17,7 +17,8 @@ from src.ui.components import (
     init_session_state,
     create_sidebar,
     create_processing_tabs,
-    display_results
+    display_results,
+    apply_theme
 )
 
 # Set up logging
