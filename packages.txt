@@ -1,5 +1,16 @@
+libgl1-mesa-glx
+libglib2.0-0
 tesseract-ocr
+libtesseract-dev
+poppler-utils
+python3-opencv
 tesseract-ocr-eng
 tesseract-ocr-ara
+tesseract-ocr-fra
+tesseract-ocr-deu
 tesseract-ocr-spa
-poppler-utils
+tesseract-ocr-rus
+tesseract-ocr-chi-sim
+tesseract-ocr-jpn
+tesseract-ocr-kor
+tesseract-ocr-ita

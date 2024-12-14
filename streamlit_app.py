@@ -4,8 +4,8 @@ from pathlib import Path
 import logging
 
 from src.utils.text_processing import format_text
-from src.utils.pdf_processing import extract_text_from_pdf, perform_ocr
-from src.utils.file_handling import create_docx, format_output
+from src.utils.pdf_processing import extract_text_from_pdf, perform_ocr, convert_pdf_to_images_and_text
+from src.utils.file_handling import create_docx, format_output, save_uploaded_file
 from src.ui.components import (
     init_session_state,
     create_sidebar,
@@ -44,54 +44,65 @@ def main():
     
     if uploaded_file is not None:
         # Save uploaded file temporarily
-        with tempfile.TemporaryDirectory() as temp_dir:
-            pdf_path = Path(temp_dir) / "temp.pdf"
-            pdf_path.write_bytes(uploaded_file.getvalue())
-            
-            # Get total pages
-            _, total_pages, _ = extract_text_from_pdf(str(pdf_path), detect_lang=False)
-            
-            # Page selection
-            st.subheader("Page Selection")
-            process_all_pages = st.checkbox("Process all pages", value=True)
-            
-            if not process_all_pages:
-                page_range = st.text_input(
-                    "Enter page range (e.g., 1-3 or 1,2,3 or 1-3,5-7)",
-                    value="1"
-                )
-            else:
-                page_range = None
+        pdf_path = save_uploaded_file(uploaded_file)
+        
+        # Get total pages
+        _, total_pages, _ = extract_text_from_pdf(str(pdf_path), detect_lang=False)
+        
+        # Page selection
+        st.subheader("Page Selection")
+        process_all_pages = st.checkbox("Process all pages", value=True)
+        
+        if not process_all_pages:
+            page_range = st.text_input(
+                "Enter page range (e.g., 1-3 or 1,2,3 or 1-3,5-7)",
+                value="1"
+            )
+        else:
+            page_range = None
 
-            # Processing options
-            st.subheader("Processing Options")
-            create_processing_tabs()
-            
-            # Preview option
-            preview_pdf = st.checkbox("Preview PDF", value=False)
+        # Processing options
+        st.subheader("Processing Options")
+        create_processing_tabs()
+        
+        # Preview option
+        preview_pdf = st.checkbox("Preview PDF", value=False)
 
-            if st.button("Process PDF"):
+        # نقل خيار طريقة المعالجة إلى الصفحة الرئيسية
+        st.subheader("طريقة المعالجة")
+        processing_method = st.radio(
+            "اختر طريقة تحويل PDF",
+            ["تحويل مباشر", "تحويل عبر الصور"],
+            horizontal=True,
+            help="""
+            - تحويل مباشر: استخراج النص مباشرة من PDF
+            - تحويل عبر الصور: تحويل PDF إلى صور ثم استخراج النص منها (مفيد عندما يفشل التحويل المباشر)
+            """
+        )
+
+        if st.button("معالجة PDF", type="primary"):
+            try:
                 with st.spinner("Processing PDF..."):
-                    try:
-                        # Get settings from session state
-                        settings = st.session_state.settings
+                    # Get settings from session state
+                    settings = st.session_state.settings
+                    
+                    # Preview PDF if requested
+                    if preview_pdf:
+                        from pdf2image import convert_from_path
+                        images = convert_from_path(str(pdf_path))
+                        st.subheader("PDF Preview")
                         
-                        # Preview PDF if requested
-                        if preview_pdf:
-                            from pdf2image import convert_from_path
-                            images = convert_from_path(str(pdf_path))
-                            st.subheader("PDF Preview")
-                            
-                            # Get pages to preview
-                            if page_range:
-                                from src.utils.pdf_processing import parse_page_range
-                                preview_pages = parse_page_range(page_range, len(images))
-                                for page_num in preview_pages:
-                                    st.image(images[page_num], caption=f"Page {page_num + 1}")
-                            else:
-                                for i, image in enumerate(images):
-                                    st.image(image, caption=f"Page {i + 1}")
+                        # Get pages to preview
+                        if page_range:
+                            from src.utils.pdf_processing import parse_page_range
+                            preview_pages = parse_page_range(page_range, len(images))
+                            for page_num in preview_pages:
+                                st.image(images[page_num], caption=f"Page {page_num + 1}")
+                        else:
+                            for i, image in enumerate(images):
+                                st.image(image, caption=f"Page {i + 1}")
 
+                    if processing_method == "تحويل مباشر":
                         # Extract text
                         if settings['use_ocr']:
                             text, page_languages = perform_ocr(
@@ -108,63 +119,77 @@ def main():
                                 detect_lang=settings['auto_detect_lang'],
                                 manual_langs=settings['manual_langs']
                             )
+                    else:
+                        # التحويل عبر الصور
+                        text, total_pages, page_languages, processed_pages = convert_pdf_to_images_and_text(
+                            pdf_path,
+                            page_range=page_range,
+                            languages=settings['manual_langs'] if not settings['auto_detect_lang'] else None
+                        )
+                        # عرض الصور المحولة
+                        st.subheader("الصور المستخرجة")
+                        image_cols = st.columns(3)
+                        for i, page_num in enumerate(processed_pages):
+                            image_path = f"{pdf_path}_page_{page_num + 1}.png"
+                            with image_cols[i % 3]:
+                                st.image(image_path, caption=f"صفحة {page_num + 1}", use_column_width=True)
 
-                        # Format text
-                        text = format_text(text, {
-                            'line_spacing': settings['line_spacing'],
-                            'margins': settings['add_margins']
-                        })
+                    # Format text
+                    text = format_text(text, {
+                        'line_spacing': settings['line_spacing'],
+                        'margins': settings['add_margins']
+                    })
+                    
+                    # Remove extra spaces if requested
+                    if settings['remove_extra_spaces']:
+                        text = " ".join(text.split())
+
+                    # Create metadata for output
+                    metadata = {
+                        'Total Pages': total_pages,
+                        'Processed Pages': page_range if page_range else 'All',
+                        'OCR Used': 'Yes' if settings['use_ocr'] else 'No',
+                        'Languages Detected': ', '.join(set(sum(page_languages.values(), []))) if page_languages else 'N/A'
+                    }
+
+                    # Format output based on selected format
+                    output_text = format_output(text, settings['output_format'], metadata)
+
+                    # Display results
+                    st.subheader("Extracted Text")
+                    st.text_area("", output_text, height=300)
+
+                    # Prepare download buttons
+                    if settings['output_format'] == 'docx':
+                        docx_path = Path(tempfile.gettempdir()) / "output.docx"
+                        create_docx(output_text, str(docx_path))
                         
-                        # Remove extra spaces if requested
-                        if settings['remove_extra_spaces']:
-                            text = " ".join(text.split())
-
-                        # Create metadata for output
-                        metadata = {
-                            'Total Pages': total_pages,
-                            'Processed Pages': page_range if page_range else 'All',
-                            'OCR Used': 'Yes' if settings['use_ocr'] else 'No',
-                            'Languages Detected': ', '.join(set(sum(page_languages.values(), []))) if page_languages else 'N/A'
-                        }
-
-                        # Format output based on selected format
-                        output_text = format_output(text, settings['output_format'], metadata)
-
-                        # Display results
-                        st.subheader("Extracted Text")
-                        st.text_area("", output_text, height=300)
-
-                        # Prepare download buttons
-                        if settings['output_format'] == 'docx':
-                            docx_path = Path(temp_dir) / "output.docx"
-                            create_docx(output_text, str(docx_path))
-                            
-                            with open(docx_path, "rb") as docx_file:
-                                st.download_button(
-                                    label="Download DOCX",
-                                    data=docx_file,
-                                    file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.docx",
-                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                )
-                        else:
-                            # Download text in selected format
-                            extension = settings['output_format']
-                            mime_type = {
-                                'txt': 'text/plain',
-                                'md': 'text/markdown',
-                                'html': 'text/html'
-                            }[settings['output_format']]
-                            
+                        with open(docx_path, "rb") as docx_file:
                             st.download_button(
-                                label=f"Download {settings['output_format'].upper()}",
-                                data=output_text,
-                                file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.{extension}",
-                                mime=mime_type
+                                label="Download DOCX",
+                                data=docx_file,
+                                file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             )
+                    else:
+                        # Download text in selected format
+                        extension = settings['output_format']
+                        mime_type = {
+                            'txt': 'text/plain',
+                            'md': 'text/markdown',
+                            'html': 'text/html'
+                        }[settings['output_format']]
+                        
+                        st.download_button(
+                            label=f"Download {settings['output_format'].upper()}",
+                            data=output_text,
+                            file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.{extension}",
+                            mime=mime_type
+                        )
 
-                    except Exception as e:
-                        st.error(f"Error processing PDF: {str(e)}")
-                        logger.error(f"Error processing PDF: {str(e)}")
+            except Exception as e:
+                st.error(f"Error processing PDF: {str(e)}")
+                logger.error(f"Error processing PDF: {str(e)}")
 
 if __name__ == "__main__":
     main()

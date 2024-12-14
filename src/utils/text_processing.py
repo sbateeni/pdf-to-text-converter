@@ -9,13 +9,17 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 from langdetect import detect, DetectorFactory
 import numpy as np
-import cv2
-from deskew import determine_skew
-from skimage import filters
+
+try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("OpenCV not available. Using basic image processing.")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Initialize language detector
 DetectorFactory.seed = 0
@@ -57,46 +61,51 @@ def enhance_image(image):
     """
     تحسين جودة الصورة لتحسين نتائج OCR
     """
-    # تحويل الصورة إلى مصفوفة numpy
-    if isinstance(image, Image.Image):
-        img_array = np.array(image)
-    else:
-        img_array = image
+    try:
+        if OPENCV_AVAILABLE:
+            # تحويل الصورة إلى مصفوفة numpy
+            if isinstance(image, Image.Image):
+                img_array = np.array(image)
+            else:
+                img_array = image
 
-    # تحويل إلى صورة رمادية
-    if len(img_array.shape) == 3:
-        gray = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = img_array
+            # تحويل إلى صورة رمادية
+            if len(img_array.shape) == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = img_array
 
-    # تصحيح انحراف الصورة
-    angle = determine_skew(gray)
-    if angle:
-        (h, w) = gray.shape[:2]
-        center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, angle, 1.0)
-        gray = cv2.warpAffine(gray, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            # تحسين التباين
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
 
-    # تحسين التباين
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    gray = clahe.apply(gray)
-
-    # إزالة الضوضاء
-    denoised = cv2.fastNlMeansDenoising(gray)
-
-    # تحسين حدة الصورة
-    sharpened = filters.unsharp_mask(denoised, radius=1.5, amount=1.5)
-    
-    # تحويل النتيجة إلى صورة PIL
-    enhanced_image = Image.fromarray((sharpened * 255).astype(np.uint8))
-    
-    # تحسين نهائي للسطوع والتباين
-    enhancer = ImageEnhance.Contrast(enhanced_image)
-    enhanced_image = enhancer.enhance(1.5)
-    enhancer = ImageEnhance.Brightness(enhanced_image)
-    enhanced_image = enhancer.enhance(1.2)
-    
-    return enhanced_image
+            # إزالة الضوضاء
+            denoised = cv2.fastNlMeansDenoising(gray)
+            
+            # تحويل النتيجة إلى صورة PIL
+            enhanced_image = Image.fromarray(denoised)
+        else:
+            # استخدام معالجة الصور الأساسية من PIL
+            enhanced_image = image.convert('L')
+            
+            # تحسين التباين
+            enhancer = ImageEnhance.Contrast(enhanced_image)
+            enhanced_image = enhancer.enhance(2.0)
+            
+            # تحسين الحدة
+            enhancer = ImageEnhance.Sharpness(enhanced_image)
+            enhanced_image = enhancer.enhance(1.5)
+        
+        # تحسين نهائي للسطوع والتباين
+        enhancer = ImageEnhance.Contrast(enhanced_image)
+        enhanced_image = enhancer.enhance(1.5)
+        enhancer = ImageEnhance.Brightness(enhanced_image)
+        enhanced_image = enhancer.enhance(1.2)
+        
+        return enhanced_image
+    except Exception as e:
+        logger.error(f"Error enhancing image: {str(e)}")
+        return image
 
 def preprocess_image_for_ocr(image):
     """
@@ -105,18 +114,21 @@ def preprocess_image_for_ocr(image):
     # تطبيق التحسينات الأساسية
     enhanced = enhance_image(image)
     
-    # تحويل الصورة إلى أبيض وأسود باستخدام عتبة تكيفية
-    img_array = np.array(enhanced)
-    binary = cv2.adaptiveThreshold(
-        img_array,
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        11,
-        2
-    )
-    
-    return Image.fromarray(binary)
+    if OPENCV_AVAILABLE:
+        # تحويل الصورة إلى أبيض وأسود باستخدام عتبة تكيفية
+        img_array = np.array(enhanced)
+        binary = cv2.adaptiveThreshold(
+            img_array,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            11,
+            2
+        )
+        return Image.fromarray(binary)
+    else:
+        # استخدام معالجة الصور الأساسية من PIL
+        return enhanced.point(lambda x: 0 if x < 128 else 255, '1')
 
 def format_text(text, format_options):
     """Format text based on selected options"""

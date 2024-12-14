@@ -10,7 +10,7 @@ from .text_processing import detect_languages, enhance_image, correct_text, prep
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def parse_page_range(page_range, total_pages):
+def parse_page_range(page_range, total_pages=None):
     """Parse page range string into list of page numbers"""
     if not page_range:
         return range(total_pages)
@@ -23,12 +23,12 @@ def parse_page_range(page_range, total_pages):
             start, end = map(int, r.split('-'))
             # Convert to 0-based index
             start = max(0, start - 1)
-            end = min(total_pages, end)
+            end = min(total_pages, end) if total_pages else end
             pages_to_process.update(range(start, end))
         else:
             # Convert to 0-based index
             page = int(r) - 1
-            if 0 <= page < total_pages:
+            if 0 <= page < (total_pages or float('inf')):
                 pages_to_process.add(page)
     
     return sorted(pages_to_process)
@@ -154,4 +154,57 @@ def perform_ocr(pdf_path, page_range=None, detect_lang=True, manual_langs=None, 
         return text.strip(), page_languages
     except Exception as e:
         logger.error(f"Error performing OCR: {str(e)}")
+        raise
+
+def convert_pdf_to_images_and_text(pdf_path, page_range=None, languages=None):
+    """
+    تحويل PDF إلى صور ثم إلى نص باستخدام OCR
+    """
+    try:
+        # تحويل نطاق الصفحات إلى قائمة
+        pages_to_process = parse_page_range(page_range)
+        
+        # تحويل PDF إلى صور
+        images = convert_from_path(pdf_path)
+        total_pages = len(images)
+        
+        # تحديد الصفحات للمعالجة
+        if not pages_to_process:
+            pages_to_process = list(range(total_pages))
+        else:
+            pages_to_process = [p for p in pages_to_process if p < total_pages]
+        
+        text = ""
+        page_languages = {}
+        
+        # معالجة كل صفحة
+        for page_num in pages_to_process:
+            image = images[page_num]
+            
+            # تحسين جودة الصورة
+            enhanced_image = preprocess_image_for_ocr(image)
+            
+            # الكشف عن اللغة إذا لم يتم تحديدها
+            if not languages:
+                detected_langs = detect_languages(enhanced_image)
+                page_languages[page_num] = detected_langs
+                current_langs = detected_langs
+            else:
+                current_langs = languages
+                page_languages[page_num] = languages
+            
+            # استخراج النص من الصورة
+            page_text = extract_text_from_image(enhanced_image, current_langs)
+            
+            # إضافة النص مع رقم الصفحة
+            text += f"\n--- Page {page_num + 1} ---\n"
+            text += page_text + "\n"
+            
+            # حفظ الصورة
+            image_path = f"{pdf_path}_page_{page_num + 1}.png"
+            enhanced_image.save(image_path, "PNG")
+        
+        return text.strip(), total_pages, page_languages, pages_to_process
+    except Exception as e:
+        logger.error(f"Error converting PDF to images and text: {str(e)}")
         raise
