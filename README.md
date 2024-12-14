@@ -1,6 +1,6 @@
 # PDF to Text Converter
 
-متوفر مباشرة على: [https://pdf-to-text-converter.streamlit.app](https://pdf-to-text-converter.streamlit.app)
+متوفر مباشرة على: [https://pdf-to-text-converter-3i77cdpzhtrsumy9hsjswh.streamlit.app](https://pdf-to-text-converter-3i77cdpzhtrsumy9hsjswh.streamlit.app)
 
 أداة متعددة الوظائف لتحويل ملفات PDF إلى نص مع دعم للغة العربية والعديد من اللغات الأخرى. تقوم الأداة بتحويل PDF إلى صور، واستخراج النص باستخدام OCR، وحفظ النص المستخرج بتنسيقات مختلفة.
 
@@ -53,7 +53,7 @@
     ```
 
 2. أو استخدام النسخة المباشرة على:
-   [https://pdf-to-text-converter.streamlit.app](https://pdf-to-text-converter.streamlit.app)
+   [https://pdf-to-text-converter-3i77cdpzhtrsumy9hsjswh.streamlit.app](https://pdf-to-text-converter-3i77cdpzhtrsumy9hsjswh.streamlit.app)
 
 3. لتحويل PDF:
    - قم برفع ملف PDF
