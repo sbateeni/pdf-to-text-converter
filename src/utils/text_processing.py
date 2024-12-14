@@ -57,6 +57,37 @@ def detect_languages(text, min_length=50):
     
     return [lang_map.get(lang, 'eng') for lang in languages]
 
+def convert_to_tesseract_langs(languages):
+    """
+    تحويل قائمة اللغات إلى رموز لغات Tesseract
+    """
+    lang_map = {
+        'ar': 'ara',    # العربية
+        'en': 'eng',    # الإنجليزية
+        'fr': 'fra',    # الفرنسية
+        'de': 'deu',    # الألمانية
+        'es': 'spa',    # الإسبانية
+        'it': 'ita',    # الإيطالية
+        'ru': 'rus',    # الروسية
+        'zh': 'chi_sim',# الصينية المبسطة
+        'ja': 'jpn',    # اليابانية
+        'ko': 'kor'     # الكورية
+    }
+    
+    if not languages:
+        return ['eng']  # استخدام الإنجليزية كلغة افتراضية
+    
+    # تحويل كل لغة إلى رمز Tesseract المناسب
+    tesseract_langs = []
+    for lang in languages:
+        if lang in lang_map:
+            tesseract_langs.append(lang_map[lang])
+        elif lang.lower() in lang_map.values():
+            tesseract_langs.append(lang.lower())
+    
+    # إذا لم يتم العثور على أي لغة صالحة، استخدم الإنجليزية
+    return tesseract_langs if tesseract_langs else ['eng']
+
 def enhance_image(image):
     """
     تحسين جودة الصورة لتحسين نتائج OCR
