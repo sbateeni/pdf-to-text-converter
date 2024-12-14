@@ -165,3 +165,71 @@ def apply_theme():
         }
         </style>
         """, unsafe_allow_html=True)
+
+def display_results(text, metadata=None, images=None, page_range=None):
+    """Display extracted text and related information"""
+    if not text:
+        return
+    
+    # عرض معلومات المستند
+    if metadata:
+        st.subheader("Document Information")
+        for key, value in metadata.items():
+            st.text(f"{key}: {value}")
+        st.divider()
+    
+    # عرض النص المستخرج
+    st.subheader("Extracted Text")
+    st.text_area("", value=text, height=400)
+    
+    # عرض الصور المعالجة
+    if images and st.session_state.settings.get('preview_enhanced', False):
+        st.subheader("Processed Images")
+        
+        # Get pages to preview
+        if page_range:
+            from src.utils.pdf_processing import parse_page_range
+            preview_pages = parse_page_range(page_range, len(images))
+            for page_num in preview_pages:
+                st.image(images[page_num], caption=f"Page {page_num + 1}")
+        else:
+            for i, image in enumerate(images):
+                st.image(image, caption=f"Page {i + 1}")
+    
+    # عرض خيارات التحميل
+    st.subheader("Download Options")
+    output_format = st.session_state.settings.get('output_format', 'txt')
+    
+    if output_format == 'txt':
+        st.download_button(
+            "Download Text",
+            text,
+            "extracted_text.txt",
+            "text/plain"
+        )
+    elif output_format == 'docx':
+        from src.utils.file_handling import create_docx
+        import tempfile
+        
+        # إنشاء ملف Word مؤقت
+        with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as tmp:
+            create_docx(text, tmp.name)
+            
+            # تحميل الملف
+            with open(tmp.name, 'rb') as f:
+                st.download_button(
+                    "Download Word Document",
+                    f.read(),
+                    "extracted_text.docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+    elif output_format in ['md', 'html']:
+        from src.utils.file_handling import format_output
+        
+        formatted_text = format_output(text, output_format, metadata)
+        st.download_button(
+            f"Download {output_format.upper()}",
+            formatted_text,
+            f"extracted_text.{output_format}",
+            f"text/{output_format}"
+        )
