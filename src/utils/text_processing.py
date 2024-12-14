@@ -10,52 +10,19 @@ from bidi.algorithm import get_display
 from langdetect import detect, DetectorFactory
 import numpy as np
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize language detector
+DetectorFactory.seed = 0
+
 try:
     import cv2
     OPENCV_AVAILABLE = True
 except ImportError:
     OPENCV_AVAILABLE = False
-    logger = logging.getLogger(__name__)
     logger.warning("OpenCV not available. Using basic image processing.")
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-
-# Initialize language detector
-DetectorFactory.seed = 0
-
-def detect_languages(text, min_length=50):
-    """
-    Detect multiple languages in text by splitting it into chunks
-    and detecting language for each chunk
-    """
-    languages = set()
-    
-    # Split text into paragraphs
-    paragraphs = [p for p in text.split('\n\n') if len(p.strip()) >= min_length]
-    
-    for paragraph in paragraphs:
-        try:
-            lang = detect(paragraph)
-            languages.add(lang)
-        except:
-            continue
-    
-    # Map language codes to Tesseract codes
-    lang_map = {
-        'en': 'eng',
-        'ar': 'ara',
-        'es': 'spa',
-        'fr': 'fra',
-        'de': 'deu',
-        'it': 'ita',
-        'ru': 'rus',
-        'zh': 'chi_sim',
-        'ja': 'jpn',
-        'ko': 'kor'
-    }
-    
-    return [lang_map.get(lang, 'eng') for lang in languages]
 
 def convert_to_tesseract_langs(languages):
     """
@@ -87,6 +54,25 @@ def convert_to_tesseract_langs(languages):
     
     # إذا لم يتم العثور على أي لغة صالحة، استخدم الإنجليزية
     return tesseract_langs if tesseract_langs else ['eng']
+
+def detect_languages(text, min_length=50):
+    """
+    Detect multiple languages in text by splitting it into chunks
+    and detecting language for each chunk
+    """
+    languages = set()
+    
+    # Split text into paragraphs
+    paragraphs = [p for p in text.split('\n\n') if len(p.strip()) >= min_length]
+    
+    for paragraph in paragraphs:
+        try:
+            lang = detect(paragraph)
+            languages.add(lang)
+        except:
+            continue
+    
+    return convert_to_tesseract_langs(languages)
 
 def enhance_image(image):
     """
@@ -163,49 +149,34 @@ def preprocess_image_for_ocr(image):
 
 def format_text(text, format_options):
     """Format text based on selected options"""
-    try:
-        # Apply line spacing
-        if format_options.get('line_spacing'):
-            text = '\n'.join([line + '\n' for line in text.split('\n')])
-            
-        # Apply margins
-        if format_options.get('margins'):
-            text = '\n'.join(['    ' + line for line in text.split('\n')])
-            
-        return text
-    except Exception as e:
-        logger.error(f"Error formatting text: {str(e)}")
-        return text
+    formatted_text = text
+    
+    # Add line spacing
+    if format_options.get('line_spacing'):
+        formatted_text = '\n'.join([line + '\n' for line in formatted_text.split('\n')])
+    
+    # Add margins
+    if format_options.get('margins'):
+        formatted_text = '\n'.join(['    ' + line for line in formatted_text.split('\n')])
+    
+    return formatted_text
 
 def correct_text(text, langs):
     """Apply text corrections based on detected languages"""
     try:
-        corrected_text = ""
-        paragraphs = text.split('\n\n')
+        # Handle right-to-left languages
+        if 'ara' in langs:
+            # Reshape Arabic text
+            text = arabic_reshaper.reshape(text)
+            # Handle bidirectional text
+            text = get_display(text)
         
-        for paragraph in paragraphs:
-            if not paragraph.strip():
-                corrected_text += '\n\n'
-                continue
-                
-            try:
-                # Detect language of paragraph
-                lang = detect(paragraph)
-                
-                if lang == 'ar':
-                    # Handle Arabic text
-                    reshaped_text = arabic_reshaper.reshape(paragraph)
-                    paragraph = get_display(reshaped_text)
-                elif lang in ['en', 'es', 'fr', 'de', 'it']:
-                    # Spell check for supported languages
-                    blob = TextBlob(paragraph)
-                    paragraph = str(blob.correct())
-                
-                corrected_text += paragraph + '\n\n'
-            except:
-                corrected_text += paragraph + '\n\n'
+        # Apply spell checking for English text
+        if 'eng' in langs:
+            blob = TextBlob(text)
+            text = str(blob.correct())
         
-        return corrected_text.strip()
+        return text
     except Exception as e:
         logger.error(f"Error correcting text: {str(e)}")
         return text
