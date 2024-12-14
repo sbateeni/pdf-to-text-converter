@@ -5,7 +5,7 @@ from pdf2image import convert_from_path
 from PyPDF2 import PdfReader
 import os
 
-from src.utils.text_processing import (
+from utils.text_processing import (
     detect_languages,
     enhance_image,
     correct_text,
