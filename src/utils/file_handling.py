@@ -2,10 +2,33 @@ import logging
 from pathlib import Path
 import docx
 from mdutils.mdutils import MdUtils
+import tempfile
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def save_uploaded_file(uploaded_file):
+    """
+    حفظ الملف المرفوع في مجلد مؤقت وإرجاع المسار
+    """
+    try:
+        # إنشاء مجلد مؤقت إذا لم يكن موجوداً
+        temp_dir = Path(tempfile.gettempdir()) / "pdf_converter"
+        temp_dir.mkdir(exist_ok=True)
+        
+        # إنشاء مسار للملف المؤقت
+        file_path = temp_dir / uploaded_file.name
+        
+        # حفظ الملف
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+            
+        return str(file_path)
+    except Exception as e:
+        logger.error(f"Error saving uploaded file: {str(e)}")
+        raise
 
 def create_docx(text, output_path):
     """Create a DOCX file from text"""
