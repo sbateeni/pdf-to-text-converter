@@ -1,6 +1,7 @@
 import streamlit as st
 import importlib
 import json
+import logging
 
 # Load translations
 with open('translations.json', 'r', encoding='utf-8') as f:
@@ -29,6 +30,19 @@ def setup_session_state():
     if 'language' not in st.session_state:
         st.session_state.language = "English"
 
+def setup_logging():
+    """Set up logging configuration for the application."""
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler('app.log')
+        ]
+    )
+    return logging.getLogger(__name__)
+
 def load_page(page_name):
     """Load the specified page module."""
     try:
@@ -44,7 +58,7 @@ def load_page(page_name):
 
 def handle_error(error_message):
     """Handle and display errors consistently."""
-    translated_error = get_translation(f"❌ An error occurred: {error_message}", st.session_state.language)
+    translated_error = get_translation(f" An error occurred: {error_message}", st.session_state.language)
     st.error(translated_error)
     log_error(error_message)
 

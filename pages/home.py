@@ -10,10 +10,18 @@ from ocr_utils import setup_tesseract
 from poppler_utils import setup_poppler
 from pages.utils import convert_pdf_to_word
 from pdf2docx import Converter
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Setup Poppler and Tesseract
-setup_poppler()
-setup_tesseract(['eng', 'ara', 'spa'])
+if not setup_poppler():
+    st.error("Failed to set up Poppler. Some PDF processing features may not work. Please check your internet connection and try again.")
+    logger.error("Poppler setup failed")
+
+if not setup_tesseract(['eng', 'ara', 'spa']):
+    st.error("Failed to set up Tesseract. OCR features may not work. Please check your internet connection and try again.")
+    logger.error("Tesseract setup failed")
 
 def pdf_to_word(pdf_file):
     # Convert PDF file to Word
