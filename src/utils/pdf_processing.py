@@ -3,13 +3,9 @@ import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 from PyPDF2 import PdfReader
-import sys
-import os
 
-# إضافة المسار للوحدات
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from src.utils.text_processing import (
+# استيراد الوظائف من نفس المجلد
+from text_processing import (
     detect_languages,
     enhance_image,
     correct_text,
