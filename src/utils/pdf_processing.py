@@ -121,50 +121,53 @@ def extract_text_from_pdf(pdf_path, page_range=None, detect_lang=True, manual_la
 def perform_ocr(pdf_path, page_range=None, detect_lang=True, manual_langs=None, enhance_images=False):
     """Perform OCR on PDF pages"""
     try:
+        # تحويل PDF إلى صور
+        images = convert_from_path(
+            pdf_path,
+            fmt='ppm',
+            grayscale=True,
+            size=(1700, None)  # تحسين الدقة
+        )
+        
+        # تحديد الصفحات المطلوبة
+        pages_to_process = parse_page_range(page_range, len(images))
+        
+        # معالجة كل صفحة
         text = ""
-        images = convert_from_path(pdf_path)
-        total_pages = len(images)
-        
-        # Get pages to process
-        pages_to_process = parse_page_range(page_range, total_pages)
-        
-        # Dictionary to store detected languages for each page
-        page_languages = {}
+        processed_images = []
         
         for page_num in pages_to_process:
+            if page_num >= len(images):
+                continue
+                
             image = images[page_num]
             
-            # Enhance image if requested
+            # تحسين جودة الصورة إذا تم تفعيل الخيار
             if enhance_images:
                 image = enhance_image(image)
             
-            # First pass: detect language if needed
+            # تجهيز الصورة لـ OCR
+            image = preprocess_image_for_ocr(image)
+            processed_images.append(image)
+            
+            # تحديد اللغات
             if detect_lang:
-                temp_text = pytesseract.image_to_string(image)
-                langs = detect_languages(temp_text)
-                page_languages[page_num] = langs
-            elif manual_langs:
-                page_languages[page_num] = manual_langs
-            
-            # Second pass: OCR with detected or manual languages
-            if page_num in page_languages:
-                page_text = ""
-                for lang in page_languages[page_num]:
-                    # Perform OCR for each detected language
-                    lang_text = pytesseract.image_to_string(image, lang=lang)
-                    page_text += lang_text + "\n"
+                # استخراج عينة من النص للكشف عن اللغة
+                sample_langs = pytesseract.image_to_string(image, lang='eng+ara')
+                langs = detect_languages(sample_langs)
             else:
-                # Fallback to English
-                page_text = pytesseract.image_to_string(image, lang='eng')
+                langs = manual_langs or ['eng']
             
-            # Apply language-specific processing
-            if page_num in page_languages:
-                page_text = correct_text(page_text, page_languages[page_num])
+            # استخراج النص
+            page_text = extract_text_from_image(image, langs)
             
-            text += f"\n--- Page {page_num + 1} ---\n"
-            text += page_text + "\n"
+            # تصحيح النص
+            page_text = correct_text(page_text, langs)
+            
+            text += f"\n--- Page {page_num + 1} ---\n{page_text}\n"
         
-        return text.strip(), page_languages
+        return text.strip(), processed_images
+        
     except Exception as e:
         logger.error(f"Error performing OCR: {str(e)}")
         raise
