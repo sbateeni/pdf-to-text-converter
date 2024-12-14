@@ -21,10 +21,10 @@ def create_sidebar():
     with st.sidebar:
         st.title("Navigation")
         st.write("Additional Tools:")
-        st.page_link("pages/1_🔍_OCR.py", label="OCR Processing", icon="🔍")
-        st.page_link("pages/2_📝_Text_Editor.py", label="Text Editor", icon="📝")
-        st.page_link("pages/3_📊_Text_Analysis.py", label="Text Analysis", icon="📊")
-        st.page_link("pages/4_📑_Document_Analysis.py", label="Document Analysis", icon="📑")
+        st.page_link("1_🔍_OCR.py", label="OCR Processing", icon="🔍")
+        st.page_link("2_📝_Text_Editor.py", label="Text Editor", icon="📝")
+        st.page_link("3_📊_Text_Analysis.py", label="Text Analysis", icon="📊")
+        st.page_link("4_📑_Document_Analysis.py", label="Document Analysis", icon="📑")
         
         st.divider()
         st.write("Settings:")
