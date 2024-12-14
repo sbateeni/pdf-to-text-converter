@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-import docx
+from docx import Document
 from mdutils.mdutils import MdUtils
 import tempfile
 import os
@@ -33,7 +33,7 @@ def save_uploaded_file(uploaded_file):
 def create_docx(text, output_path):
     """Create a DOCX file from text"""
     try:
-        doc = docx.Document()
+        doc = Document()
         doc.add_paragraph(text)
         doc.save(output_path)
         return True
