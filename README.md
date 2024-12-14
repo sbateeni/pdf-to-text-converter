@@ -1,82 +1,84 @@
 # PDF to Text Converter
 
-This project is a versatile document conversion tool that primarily converts PDF files to images, extracts text using OCR, and saves the extracted text to various formats including Word, PDF, and Markdown.
+متوفر مباشرة على: [https://pdf-to-text-converter.streamlit.app](https://pdf-to-text-converter.streamlit.app)
 
-## Features
+أداة متعددة الوظائف لتحويل ملفات PDF إلى نص مع دعم للغة العربية والعديد من اللغات الأخرى. تقوم الأداة بتحويل PDF إلى صور، واستخراج النص باستخدام OCR، وحفظ النص المستخرج بتنسيقات مختلفة.
 
-- Convert PDF pages to images
-- Extract text using Tesseract OCR
-- Correct spelling for English text
-- Reverse text direction for RTL languages
-- Display images and extracted text
-- Save extracted text to Word, PDF, or Markdown formats
-- Convert extracted text to speech
-- Multiple file format conversions (HTML, RTF, YAML, JSON, CSV, Excel, PowerPoint)
+## المميزات الرئيسية
 
-## New Features
-- Voice selection for text-to-speech conversion
-- Export extracted text to Markdown format
-- Improved error logging for better debugging
-- Multi-language support (English, Arabic, Spanish, French)
-- Image to text conversion
-- PDF to image conversion
-- HTML content fetching and processing
+- دعم كامل للغة العربية والإنجليزية والفرنسية والإسبانية وغيرها
+- تحويل صفحات PDF إلى صور عالية الجودة
+- استخراج النص باستخدام Tesseract OCR
+- تصحيح الأخطاء الإملائية للنص الإنجليزي
+- دعم اتجاه النص من اليمين إلى اليسار للغة العربية
+- عرض الصور والنص المستخرج
+- حفظ النص المستخرج بتنسيقات Word وPDF وMarkdown
+- تحويل النص المستخرج إلى كلام
+- تحويل متعدد التنسيقات (HTML، RTF، YAML، JSON، CSV، Excel، PowerPoint)
 
-## Installation
+## الميزات الجديدة
+- اختيار الصوت لتحويل النص إلى كلام
+- تصدير النص المستخرج إلى تنسيق Markdown
+- تحسين تسجيل الأخطاء للتصحيح
+- دعم متعدد اللغات
+- تحويل الصور إلى نص
+- تحويل PDF إلى صور
+- معالجة محتوى HTML
+- تحسين جودة الصور قبل OCR
+- دعم ملفات PDF المحمية
+- واجهة مستخدم محسنة وسهلة الاستخدام
 
-1. Clone the repository:
+## التثبيت المحلي
+
+1. استنساخ المستودع:
     ```bash
-    git clone https://github.com/your-repo/pdf-to-image-converter.git
+    git clone https://github.com/XmaX111/pdf-to-text-converter.git
     ```
 
-2. Navigate to the project directory:
+2. الانتقال إلى مجلد المشروع:
     ```bash
     cd pdf-to-text-converter
     ```
 
-3. Install the required packages:
+3. تثبيت الحزم المطلوبة:
     ```bash
     pip install -r requirements.txt
     ```
 
-4. Set up Tesseract OCR:
-    - Download and install Tesseract from [Tesseract at UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki).
-    - Make sure Tesseract is in your system's PATH.
+## الاستخدام
 
-## Usage
-
-1. Run the application:
+1. تشغيل التطبيق محلياً:
     ```bash
-    streamlit run app.py
+    streamlit run streamlit_app.py
     ```
 
-2. Use the sidebar to navigate between different conversion tools.
+2. أو استخدام النسخة المباشرة على:
+   [https://pdf-to-text-converter.streamlit.app](https://pdf-to-text-converter.streamlit.app)
 
-3. For PDF conversion:
-   - Upload a PDF file
-   - Select language for OCR
-   - Choose text direction
-   - Specify page range (optional)
-   - Enable spell checking (optional)
-   - Display images (optional)
+3. لتحويل PDF:
+   - قم برفع ملف PDF
+   - اختر لغة النص للتعرف الضوئي
+   - حدد اتجاه النص
+   - حدد نطاق الصفحات (اختياري)
+   - فعّل تصحيح الإملاء (اختياري)
+   - اختر عرض الصور (اختياري)
 
-4. Click the respective conversion button to process your document.
+4. انقر على زر التحويل المناسب لمعالجة المستند.
 
-5. Download the converted file or view the extracted content.
+5. قم بتحميل الملف المحول أو عرض المحتوى المستخرج.
 
-## Additional Tools
+## الأدوات الإضافية
 
-- Text Search: Search within extracted text
-- Image Viewer: View extracted images from PDFs
-- Language Selector: Choose your preferred interface language
-- Settings: Configure application settings
-- Error Log: View and manage error logs
+- البحث في النص: البحث داخل النص المستخرج
+- عارض الصور: عرض الصور المستخرجة من ملفات PDF
+- محدد اللغة: اختيار لغة واجهة المستخدم المفضلة
+- الإعدادات: تكوين إعدادات التطبيق
+- سجل الأخطاء: عرض وإدارة سجلات الأخطاء
 
-## License
+## الترخيص
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+هذا المشروع مرخص تحت رخصة MIT. راجع ملف [LICENSE](LICENSE) للتفاصيل.
 
-## Contact
+## التواصل
 
-For any questions or issues, please contact [Your Name](mailto:your.email@example.com).
-
+للأسئلة أو المشكلات، يرجى التواصل عبر [GitHub Issues](https://github.com/XmaX111/pdf-to-text-converter/issues).

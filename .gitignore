@@ -1,4 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
 /poppler
-file_handling/output/About_Jordan.docx
-/file_handling/output
+/file_handling/output/
+*.docx
+*.pdf
+*.png
+*.jpg
+*.jpeg
+/temp/
+.streamlit/secrets.toml
+
+# System
+.DS_Store
+Thumbs.db
