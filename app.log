@@ -1,1 +1,0 @@
-2024-12-14 11:27:57,543 - file_handling.file_processor - ERROR - Error processing file: 'str' object has no attribute 'name'
