@@ -10,6 +10,8 @@ from PyPDF2 import PdfReader
 from textblob import TextBlob
 import arabic_reshaper
 from bidi.algorithm import get_display
+from pdf2docx import Converter
+import docx
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +75,17 @@ def correct_text(text, lang):
         logger.error(f"Error correcting text: {str(e)}")
         return text
 
+def convert_to_docx(pdf_path, output_path):
+    """Convert PDF to DOCX format"""
+    try:
+        cv = Converter(pdf_path)
+        cv.convert(output_path)
+        cv.close()
+        return True
+    except Exception as e:
+        logger.error(f"Error converting to DOCX: {str(e)}")
+        raise
+
 def main():
     st.title("PDF to Text Converter")
     st.write("Upload your PDF file and convert it to text with support for English, Arabic, and Spanish")
@@ -94,13 +107,19 @@ def main():
         )
 
         # Processing options
+        st.subheader("Processing Options")
         col1, col2, col3 = st.columns(3)
+        
         with col1:
             use_ocr = st.checkbox("Use OCR", value=True)
-        with col2:
             correct_spelling = st.checkbox("Correct spelling", value=True)
-        with col3:
+        
+        with col2:
             remove_extra_spaces = st.checkbox("Remove extra spaces", value=True)
+            convert_docx = st.checkbox("Convert to DOCX", value=False)
+        
+        with col3:
+            preview_pdf = st.checkbox("Preview PDF", value=False)
 
         if st.button("Process PDF"):
             with st.spinner("Processing PDF..."):
@@ -109,6 +128,13 @@ def main():
                     with tempfile.TemporaryDirectory() as temp_dir:
                         pdf_path = Path(temp_dir) / "temp.pdf"
                         pdf_path.write_bytes(uploaded_file.getvalue())
+
+                        # Preview PDF if requested
+                        if preview_pdf:
+                            images = convert_from_path(str(pdf_path))
+                            st.subheader("PDF Preview")
+                            for i, image in enumerate(images):
+                                st.image(image, caption=f"Page {i+1}")
 
                         # Extract text
                         if use_ocr:
@@ -126,7 +152,20 @@ def main():
                         st.subheader("Extracted Text")
                         st.text_area("", text, height=300)
 
-                        # Download button
+                        # Convert to DOCX if requested
+                        if convert_docx:
+                            docx_path = Path(temp_dir) / "output.docx"
+                            convert_to_docx(str(pdf_path), str(docx_path))
+                            
+                            with open(docx_path, "rb") as docx_file:
+                                st.download_button(
+                                    label="Download DOCX",
+                                    data=docx_file,
+                                    file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.docx",
+                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                )
+
+                        # Download text button
                         st.download_button(
                             label="Download Text",
                             data=text,
