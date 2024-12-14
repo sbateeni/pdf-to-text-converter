@@ -2,6 +2,11 @@ import streamlit as st
 import tempfile
 from pathlib import Path
 import logging
+import sys
+import os
+
+# إضافة المسار للوحدات
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.utils.text_processing import format_text
 from src.utils.pdf_processing import extract_text_from_pdf, perform_ocr, convert_pdf_to_images_and_text
@@ -10,7 +15,7 @@ from src.ui.components import (
     init_session_state,
     create_sidebar,
     create_processing_tabs,
-    apply_theme
+    display_results
 )
 
 # Set up logging

@@ -1,10 +1,21 @@
 import logging
-from pathlib import Path
 import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 from PyPDF2 import PdfReader
-from .text_processing import detect_languages, enhance_image, correct_text, preprocess_image_for_ocr, convert_to_tesseract_langs
+import sys
+import os
+
+# إضافة المسار للوحدات
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from src.utils.text_processing import (
+    detect_languages,
+    enhance_image,
+    correct_text,
+    preprocess_image_for_ocr,
+    convert_to_tesseract_langs
+)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
