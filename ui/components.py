@@ -11,7 +11,7 @@ def init_session_state():
         st.session_state.settings = {
             'use_ocr': True,
             'auto_detect_lang': True,
-            'manual_langs': ['eng'],
+            'manual_langs': [('eng', 'English - الإنجليزية'), ('ara', 'Arabic - العربية')],
             'enhance_images': True,
             'preview_enhanced': False,
             'correct_spelling': True,
@@ -125,25 +125,28 @@ def create_processing_tabs():
                 help="في حال تفعيل هذا الخيار، سيحاول البرنامج كشف اللغة تلقائياً. قم بتعطيله واختيار اللغات يدوياً للحصول على نتائج أفضل."
             )
         
+        # Define available languages
+        available_languages = [
+            ('eng', 'English - الإنجليزية'),
+            ('ara', 'Arabic - العربية'),
+            ('fra', 'French - الفرنسية'),
+            ('deu', 'German - الألمانية'),
+            ('spa', 'Spanish - الإسبانية'),
+            ('ita', 'Italian - الإيطالية'),
+            ('tur', 'Turkish - التركية'),
+            ('rus', 'Russian - الروسية')
+        ]
+        
         if not st.session_state.settings['auto_detect_lang']:
             with lang_col2:
-                st.session_state.settings['manual_langs'] = st.multiselect(
+                selected_langs = st.multiselect(
                     "اختر اللغات الموجودة في الملف",
-                    options=[
-                        ('eng', 'English - الإنجليزية'),
-                        ('ara', 'Arabic - العربية'),
-                        ('fra', 'French - الفرنسية'),
-                        ('deu', 'German - الألمانية'),
-                        ('spa', 'Spanish - الإسبانية'),
-                        ('ita', 'Italian - الإيطالية'),
-                        ('tur', 'Turkish - التركية'),
-                        ('rus', 'Russian - الروسية')
-                    ],
-                    default=['eng', 'ara'],
+                    options=available_languages,
+                    default=st.session_state.settings['manual_langs'],
                     format_func=lambda x: x[1],
                     help="اختر جميع اللغات الموجودة في الملف للحصول على أفضل النتائج"
                 )
-                st.session_state.settings['manual_langs'] = [lang[0] for lang in st.session_state.settings['manual_langs']]
+                st.session_state.settings['manual_langs'] = selected_langs
 
         # Page range selection
         st.divider()
@@ -195,11 +198,17 @@ def process_pdf():
                 # Get page range if specified
                 page_range = None if st.session_state.get('process_all', True) else st.session_state.get('page_range', '')
                 
+                # Get selected languages (extract language codes from tuples)
+                if st.session_state.settings['auto_detect_lang']:
+                    languages = None
+                else:
+                    languages = [lang[0] for lang in st.session_state.settings['manual_langs']]
+                
                 # Convert PDF to images and text
                 text, total_pages, page_languages, pages_processed = convert_pdf_to_images_and_text(
                     st.session_state.current_pdf_path,
                     page_range=page_range,
-                    languages=st.session_state.settings['manual_langs'] if not st.session_state.settings['auto_detect_lang'] else None
+                    languages=languages
                 )
                 
                 # Format text if needed
