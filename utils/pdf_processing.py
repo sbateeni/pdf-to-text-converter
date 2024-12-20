@@ -194,17 +194,22 @@ def convert_pdf_to_images_and_text(pdf_path, page_range=None, languages=None):
             # تحسين جودة الصورة
             enhanced_image = preprocess_image_for_ocr(image)
             
-            # الكشف عن اللغة إذا لم يتم تحديدها
-            if not languages:
-                detected_langs = detect_languages(enhanced_image)
-                page_languages[page_num] = detected_langs
-                current_langs = detected_langs
-            else:
-                current_langs = languages
-                page_languages[page_num] = languages
-            
             # استخراج النص من الصورة
+            if languages:
+                current_langs = languages
+            else:
+                # Use default languages for OCR
+                current_langs = ['eng', 'ara']  # Default to English and Arabic
+            
             page_text = extract_text_from_image(enhanced_image, current_langs)
+            
+            # Try to detect languages from extracted text
+            try:
+                detected_langs = detect_languages(page_text)
+                page_languages[page_num] = detected_langs
+            except Exception as e:
+                logger.warning(f"Could not detect languages for page {page_num + 1}: {str(e)}")
+                page_languages[page_num] = current_langs
             
             # إضافة النص مع رقم الصفحة
             text += f"\n--- Page {page_num + 1} ---\n"
