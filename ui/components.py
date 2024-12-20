@@ -1,4 +1,6 @@
 import streamlit as st
+import os
+import glob
 
 def init_session_state():
     """Initialize session state with default values"""
@@ -17,6 +19,12 @@ def init_session_state():
         }
     if 'theme' not in st.session_state:
         st.session_state.theme = 'light'
+    if 'converted_pages' not in st.session_state:
+        st.session_state.converted_pages = []
+    if 'current_pdf_path' not in st.session_state:
+        st.session_state.current_pdf_path = None
+    if 'processing' not in st.session_state:
+        st.session_state.processing = False
 
 def create_sidebar():
     """Create sidebar with navigation and theme toggle"""
@@ -80,69 +88,91 @@ def create_language_settings():
 
 def create_processing_tabs():
     """Create tabs for different processing options"""
-    tabs = st.tabs(["OCR & Language", "Image Enhancement", "Text Formatting"])
+    # Create three columns for the control buttons
+    col1, col2, col3 = st.columns(3)
     
-    with tabs[0]:
-        col1, col2 = st.columns(2)
-        with col1:
-            use_ocr = st.checkbox(
-                "Use OCR",
-                value=st.session_state.settings['use_ocr'],
-                key='use_ocr'
-            )
-        with col2:
-            create_language_settings()
+    with col1:
+        if st.button("تحويل PDF إلى نص", type="primary"):
+            if 'current_pdf_path' in st.session_state and st.session_state.current_pdf_path:
+                st.session_state.processing = True
+                process_pdf()
+            else:
+                st.error("الرجاء تحميل ملف PDF أولاً")
     
-    with tabs[1]:
-        col1, col2 = st.columns(2)
-        with col1:
-            enhance_images = st.checkbox(
-                "Enhance image quality",
-                value=st.session_state.settings['enhance_images'],
-                key='enhance_images'
-            )
-            preview_enhanced = st.checkbox(
-                "Preview enhanced images",
-                value=st.session_state.settings['preview_enhanced'],
-                key='preview_enhanced'
-            )
-        with col2:
-            correct_spelling = st.checkbox(
-                "Correct spelling",
-                value=st.session_state.settings['correct_spelling'],
-                key='correct_spelling'
-            )
-            remove_extra_spaces = st.checkbox(
-                "Remove extra spaces",
-                value=st.session_state.settings['remove_extra_spaces'],
-                key='remove_extra_spaces'
-            )
+    with col2:
+        if st.button("عرض النص المستخرج"):
+            st.switch_page("pages/5_📖_Text_Viewer.py")
     
-    with tabs[2]:
-        col1, col2 = st.columns(2)
-        with col1:
-            line_spacing = st.checkbox(
-                "Double line spacing",
-                value=st.session_state.settings['line_spacing'],
-                key='line_spacing'
+    with col3:
+        if st.button("مسح النتائج"):
+            clear_results()
+
+    # Only show processing options if not currently processing
+    if not st.session_state.get('processing', False):
+        tab1, tab2, tab3 = st.tabs(["إعدادات OCR", "تحسين النص", "إعدادات الإخراج"])
+        
+        with tab1:
+            st.session_state.settings['use_ocr'] = st.toggle("استخدام OCR", value=st.session_state.settings['use_ocr'])
+            st.session_state.settings['auto_detect_lang'] = st.toggle("كشف تلقائي للغة", value=st.session_state.settings['auto_detect_lang'])
+            if not st.session_state.settings['auto_detect_lang']:
+                st.session_state.settings['manual_langs'] = st.multiselect(
+                    "اختر اللغات",
+                    ['eng', 'ara', 'fra', 'deu'],
+                    default=st.session_state.settings['manual_langs']
+                )
+            st.session_state.settings['enhance_images'] = st.toggle("تحسين جودة الصور", value=st.session_state.settings['enhance_images'])
+            
+        with tab2:
+            st.session_state.settings['correct_spelling'] = st.toggle("تصحيح الإملاء", value=st.session_state.settings['correct_spelling'])
+            st.session_state.settings['remove_extra_spaces'] = st.toggle("إزالة المسافات الزائدة", value=st.session_state.settings['remove_extra_spaces'])
+            
+        with tab3:
+            st.session_state.settings['line_spacing'] = st.toggle("تباعد الأسطر", value=st.session_state.settings['line_spacing'])
+            st.session_state.settings['add_margins'] = st.toggle("إضافة هوامش", value=st.session_state.settings['add_margins'])
+            st.session_state.settings['output_format'] = st.selectbox(
+                "تنسيق الإخراج",
+                ['txt', 'docx', 'pdf'],
+                index=['txt', 'docx', 'pdf'].index(st.session_state.settings['output_format'])
             )
-            add_margins = st.checkbox(
-                "Add margins",
-                value=st.session_state.settings['add_margins'],
-                key='add_margins'
+
+def process_pdf():
+    """Process the PDF file and store results"""
+    try:
+        if st.session_state.current_pdf_path:
+            # Convert PDF to images and text
+            text, total_pages, page_languages, pages_processed = convert_pdf_to_images_and_text(
+                st.session_state.current_pdf_path,
+                languages=st.session_state.settings['manual_langs'] if not st.session_state.settings['auto_detect_lang'] else None
             )
-        with col2:
-            output_format = st.selectbox(
-                "Output format",
-                options=['txt', 'md', 'html', 'docx'],
-                format_func=lambda x: {
-                    'txt': 'Plain Text',
-                    'md': 'Markdown',
-                    'html': 'HTML',
-                    'docx': 'Word Document'
-                }[x],
-                key='output_format'
-            )
+            
+            # Split text into pages and store in session state
+            pages = text.split('\n--- Page')
+            st.session_state.converted_pages = [page.strip() for page in pages if page.strip()]
+            
+            # Show success message and navigation button
+            st.success(f"تم تحويل {total_pages} صفحات بنجاح!")
+            st.button("عرض النتائج", on_click=lambda: st.switch_page("pages/5_📖_Text_Viewer.py"))
+    except Exception as e:
+        st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
+    finally:
+        st.session_state.processing = False
+
+def clear_results():
+    """Clear all conversion results and temporary files"""
+    if 'current_pdf_path' in st.session_state:
+        # Delete temporary image files
+        import glob
+        for img_file in glob.glob(f"{st.session_state.current_pdf_path}_page_*.png"):
+            try:
+                os.remove(img_file)
+            except:
+                pass
+    
+    # Clear session state
+    st.session_state.converted_pages = []
+    st.session_state.current_pdf_path = None
+    st.session_state.processing = False
+    st.success("تم مسح جميع النتائج")
 
 def toggle_theme():
     """Toggle between light and dark theme"""
