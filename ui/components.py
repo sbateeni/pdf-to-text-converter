@@ -20,6 +20,14 @@ def init_session_state():
             'add_margins': False,
             'output_format': 'txt'
         }
+    elif not isinstance(st.session_state.settings.get('manual_langs', []), list) or \
+         (len(st.session_state.settings['manual_langs']) > 0 and \
+          not isinstance(st.session_state.settings['manual_langs'][0], tuple)):
+        st.session_state.settings['manual_langs'] = [
+            ('eng', 'English - الإنجليزية'),
+            ('ara', 'Arabic - العربية')
+        ]
+    
     if 'theme' not in st.session_state:
         st.session_state.theme = 'light'
     if 'converted_pages' not in st.session_state:
@@ -139,6 +147,15 @@ def create_processing_tabs():
         
         if not st.session_state.settings['auto_detect_lang']:
             with lang_col2:
+                # Initialize manual_langs if it's not in the correct format
+                if not isinstance(st.session_state.settings.get('manual_langs', []), list) or \
+                   (len(st.session_state.settings['manual_langs']) > 0 and \
+                    not isinstance(st.session_state.settings['manual_langs'][0], tuple)):
+                    st.session_state.settings['manual_langs'] = [
+                        ('eng', 'English - الإنجليزية'),
+                        ('ara', 'Arabic - العربية')
+                    ]
+                
                 selected_langs = st.multiselect(
                     "اختر اللغات الموجودة في الملف",
                     options=available_languages,

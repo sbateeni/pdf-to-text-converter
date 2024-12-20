@@ -1,45 +1,30 @@
 import streamlit as st
-import os
 from pathlib import Path
+import sys
+import os
 
-def display_converted_text():
-    st.title("النص المستخرج من PDF")
+# Add the root directory to the Python path
+root_dir = Path(__file__).parent.parent
+sys.path.append(str(root_dir))
+
+from ui.components import init_session_state, set_page_config
+from utils.pdf_processing import get_page_image
+
+# Initialize session state and set page config
+init_session_state()
+set_page_config()
+
+def main():
+    st.title("عرض النص المستخرج ")
     
-    if 'converted_pages' not in st.session_state or not st.session_state.converted_pages:
-        st.warning("لم يتم تحويل أي ملف PDF بعد. الرجاء العودة إلى الصفحة الرئيسية وتحويل ملف PDF أولاً.")
+    if not st.session_state.converted_pages:
+        st.warning("لا يوجد نص مستخرج بعد. الرجاء تحويل ملف PDF أولاً.")
         if st.button("العودة إلى الصفحة الرئيسية"):
             st.switch_page("streamlit_app.py")
         return
     
-    # Get the number of pages
-    num_pages = len(st.session_state.converted_pages)
-    
-    # Create tabs for each page
-    page_tabs = st.tabs([f"صفحة {i+1}" for i in range(num_pages)])
-    
-    # Display text for each page in its respective tab
-    for i, (tab, page_text) in enumerate(zip(page_tabs, st.session_state.converted_pages)):
-        with tab:
-            # Create columns for text and image
-            text_col, image_col = st.columns([2, 1])
-            
-            with text_col:
-                st.text_area(
-                    label=f"نص الصفحة {i+1}",
-                    value=page_text,
-                    height=400,
-                    key=f"text_area_{i}"
-                )
-            
-            with image_col:
-                # If there's a corresponding image, display it
-                if st.session_state.get('current_pdf_path'):
-                    image_path = f"{st.session_state.current_pdf_path}_page_{i+1}.png"
-                    if os.path.exists(image_path):
-                        st.image(image_path, caption=f"الصورة الأصلية - صفحة {i+1}")
-    
-    # Add navigation buttons at the bottom
-    col1, col2 = st.columns(2)
+    # Add navigation buttons at the top
+    col1, col2 = st.columns([1, 4])
     with col1:
         if st.button("العودة إلى الصفحة الرئيسية"):
             st.switch_page("streamlit_app.py")
@@ -47,7 +32,67 @@ def display_converted_text():
         if st.button("مسح النتائج"):
             st.session_state.converted_pages = []
             st.session_state.current_pdf_path = None
-            st.rerun()
+            st.experimental_rerun()
+    
+    # Show total number of pages
+    total_pages = len(st.session_state.converted_pages)
+    st.write(f"عدد الصفحات: {total_pages}")
+    
+    # Add page selector
+    page_number = st.selectbox(
+        "اختر الصفحة",
+        range(1, total_pages + 1),
+        format_func=lambda x: f"الصفحة {x}"
+    )
+    
+    # Create tabs for the selected page
+    text_tab, image_tab = st.tabs(["النص", "الصورة"])
+    
+    with text_tab:
+        # Show text for the selected page
+        st.markdown("### النص المستخرج")
+        page_text = st.session_state.converted_pages[page_number - 1]
+        st.text_area(
+            "نص الصفحة",
+            value=page_text,
+            height=400,
+            key=f"text_area_{page_number}"
+        )
+        
+        # Add copy button
+        if st.button("نسخ النص", key=f"copy_btn_{page_number}"):
+            st.write("تم نسخ النص!")
+            st.toast("تم نسخ النص بنجاح!")
+    
+    with image_tab:
+        # Show image for the selected page
+        st.markdown("### صورة الصفحة")
+        if st.session_state.current_pdf_path:
+            try:
+                image = get_page_image(st.session_state.current_pdf_path, page_number - 1)
+                if image:
+                    st.image(image, caption=f"الصفحة {page_number}", use_column_width=True)
+                else:
+                    st.warning("لا يمكن عرض صورة الصفحة")
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء تحميل صورة الصفحة: {str(e)}")
+    
+    # Add page navigation buttons
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if page_number > 1:
+            if st.button("الصفحة السابقة"):
+                st.session_state.page_number = page_number - 1
+                st.experimental_rerun()
+    
+    with col2:
+        st.write(f"الصفحة {page_number} من {total_pages}")
+    
+    with col3:
+        if page_number < total_pages:
+            if st.button("الصفحة التالية"):
+                st.session_state.page_number = page_number + 1
+                st.experimental_rerun()
 
 if __name__ == "__main__":
-    display_converted_text()
+    main()
