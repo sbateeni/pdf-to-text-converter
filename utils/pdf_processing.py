@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def parse_page_range(page_range, total_pages=None):
     """Parse page range string into list of page numbers"""
     if not page_range:
-        return range(total_pages)
+        return range(total_pages) if total_pages is not None else []
     
     pages_to_process = set()
     ranges = page_range.replace(' ', '').split(',')
@@ -171,12 +171,12 @@ def convert_pdf_to_images_and_text(pdf_path, page_range=None, languages=None):
     تحويل PDF إلى صور ثم إلى نص باستخدام OCR
     """
     try:
-        # تحويل نطاق الصفحات إلى قائمة
-        pages_to_process = parse_page_range(page_range)
-        
         # تحويل PDF إلى صور
         images = convert_from_path(pdf_path)
         total_pages = len(images)
+        
+        # تحويل نطاق الصفحات إلى قائمة
+        pages_to_process = parse_page_range(page_range, total_pages)
         
         # تحديد الصفحات للمعالجة
         if not pages_to_process:
