@@ -112,6 +112,27 @@ def create_processing_tabs():
 
     # Only show processing options if not currently processing
     if not st.session_state.get('processing', False):
+        # Add page range selection at the top
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            process_all = st.checkbox("تحويل كل الصفحات", value=True, key='process_all')
+        
+        if not process_all:
+            with col2:
+                page_range = st.text_input(
+                    "حدد نطاق الصفحات (مثال: 1-3 أو 1,2,3 أو 1-3,5-7)",
+                    help="""
+                    يمكنك تحديد الصفحات بعدة طرق:
+                    - رقم واحد: مثل '5' لتحويل الصفحة الخامسة فقط
+                    - نطاق: مثل '1-3' لتحويل الصفحات من 1 إلى 3
+                    - قائمة: مثل '1,3,5' لتحويل صفحات محددة
+                    - مزيج: مثل '1-3,5,7-9' لتحويل مجموعة من النطاقات والصفحات
+                    """
+                )
+        else:
+            page_range = None
+
         tab1, tab2, tab3 = st.tabs(["إعدادات OCR", "تحسين النص", "إعدادات الإخراج"])
         
         with tab1:
@@ -143,9 +164,13 @@ def process_pdf():
     try:
         if st.session_state.current_pdf_path:
             with st.spinner("جاري تحويل PDF إلى نص..."):
+                # Get page range if specified
+                page_range = None if st.session_state.get('process_all', True) else st.session_state.get('page_range', '')
+                
                 # Convert PDF to images and text
                 text, total_pages, page_languages, pages_processed = convert_pdf_to_images_and_text(
                     st.session_state.current_pdf_path,
+                    page_range=page_range,
                     languages=st.session_state.settings['manual_langs'] if not st.session_state.settings['auto_detect_lang'] else None
                 )
                 
@@ -157,8 +182,12 @@ def process_pdf():
                 pages = text.split('\n--- Page')
                 st.session_state.converted_pages = [page.strip() for page in pages if page.strip()]
                 
-                # Show success message and navigation button
-                st.success(f"تم تحويل {total_pages} صفحات بنجاح!")
+                # Show success message with page information
+                if page_range:
+                    st.success(f"تم تحويل {len(pages_processed)} صفحات من أصل {total_pages} صفحة!")
+                else:
+                    st.success(f"تم تحويل {total_pages} صفحات بنجاح!")
+                
                 st.button("عرض النتائج", on_click=lambda: st.switch_page("pages/5_📖_Text_Viewer.py"))
     except Exception as e:
         st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
