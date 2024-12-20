@@ -7,17 +7,17 @@ import os
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
-from ui.components import init_session_state, set_page_config
-from utils.pdf_processing import get_page_image
-
-# Initialize session state and set page config
-init_session_state()
-set_page_config()
+# Set up the page
+st.set_page_config(
+    page_title="عرض النص المستخرج",
+    page_icon="📖",
+    layout="wide"
+)
 
 def main():
-    st.title("عرض النص المستخرج ")
+    st.title("عرض النص المستخرج 📖")
     
-    if not st.session_state.converted_pages:
+    if not st.session_state.get('converted_pages', []):
         st.warning("لا يوجد نص مستخرج بعد. الرجاء تحويل ملف PDF أولاً.")
         if st.button("العودة إلى الصفحة الرئيسية"):
             st.switch_page("streamlit_app.py")
@@ -42,7 +42,8 @@ def main():
     page_number = st.selectbox(
         "اختر الصفحة",
         range(1, total_pages + 1),
-        format_func=lambda x: f"الصفحة {x}"
+        format_func=lambda x: f"الصفحة {x}",
+        key="page_selector"
     )
     
     # Create tabs for the selected page
@@ -52,7 +53,7 @@ def main():
         # Show text for the selected page
         st.markdown("### النص المستخرج")
         page_text = st.session_state.converted_pages[page_number - 1]
-        st.text_area(
+        text_area = st.text_area(
             "نص الصفحة",
             value=page_text,
             height=400,
@@ -67,22 +68,20 @@ def main():
     with image_tab:
         # Show image for the selected page
         st.markdown("### صورة الصفحة")
-        if st.session_state.current_pdf_path:
-            try:
-                image = get_page_image(st.session_state.current_pdf_path, page_number - 1)
-                if image:
-                    st.image(image, caption=f"الصفحة {page_number}", use_column_width=True)
-                else:
-                    st.warning("لا يمكن عرض صورة الصفحة")
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء تحميل صورة الصفحة: {str(e)}")
+        if st.session_state.get('current_pdf_path'):
+            image_path = f"{st.session_state.current_pdf_path}_page_{page_number}.png"
+            if os.path.exists(image_path):
+                st.image(image_path, caption=f"الصفحة {page_number}", use_column_width=True)
+            else:
+                st.warning("لا يمكن عرض صورة الصفحة")
     
     # Add page navigation buttons
     col1, col2, col3 = st.columns(3)
     with col1:
         if page_number > 1:
             if st.button("الصفحة السابقة"):
-                st.session_state.page_number = page_number - 1
+                new_page = page_number - 1
+                st.session_state.page_selector = new_page
                 st.experimental_rerun()
     
     with col2:
@@ -91,7 +90,8 @@ def main():
     with col3:
         if page_number < total_pages:
             if st.button("الصفحة التالية"):
-                st.session_state.page_number = page_number + 1
+                new_page = page_number + 1
+                st.session_state.page_selector = new_page
                 st.experimental_rerun()
 
 if __name__ == "__main__":

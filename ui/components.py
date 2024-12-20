@@ -5,6 +5,15 @@ from pathlib import Path
 from utils.pdf_processing import convert_pdf_to_images_and_text
 from utils.text_processing import format_text
 
+def set_page_config():
+    """Set Streamlit page configuration"""
+    st.set_page_config(
+        page_title="PDF Text Extractor",
+        page_icon="📄",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
 def init_session_state():
     """Initialize session state with default values"""
     if 'settings' not in st.session_state:
