@@ -15,6 +15,8 @@ def init_session_state():
             'add_margins': False,
             'output_format': 'txt'
         }
+    if 'theme' not in st.session_state:
+        st.session_state.theme = 'light'
 
 def create_sidebar():
     """Create sidebar with navigation and theme toggle"""
