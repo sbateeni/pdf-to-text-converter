@@ -109,18 +109,52 @@ def create_processing_tabs():
     with col3:
         if st.button("مسح النتائج"):
             clear_results()
+            st.experimental_rerun()
 
     # Only show processing options if not currently processing
     if not st.session_state.get('processing', False):
-        # Add page range selection at the top
+        # Language selection at the top
         st.divider()
+        st.subheader("إعدادات اللغة")
+        lang_col1, lang_col2 = st.columns(2)
+        
+        with lang_col1:
+            st.session_state.settings['auto_detect_lang'] = st.toggle(
+                "كشف تلقائي للغة",
+                value=st.session_state.settings['auto_detect_lang'],
+                help="في حال تفعيل هذا الخيار، سيحاول البرنامج كشف اللغة تلقائياً. قم بتعطيله واختيار اللغات يدوياً للحصول على نتائج أفضل."
+            )
+        
+        if not st.session_state.settings['auto_detect_lang']:
+            with lang_col2:
+                st.session_state.settings['manual_langs'] = st.multiselect(
+                    "اختر اللغات الموجودة في الملف",
+                    options=[
+                        ('eng', 'English - الإنجليزية'),
+                        ('ara', 'Arabic - العربية'),
+                        ('fra', 'French - الفرنسية'),
+                        ('deu', 'German - الألمانية'),
+                        ('spa', 'Spanish - الإسبانية'),
+                        ('ita', 'Italian - الإيطالية'),
+                        ('tur', 'Turkish - التركية'),
+                        ('rus', 'Russian - الروسية')
+                    ],
+                    default=['eng', 'ara'],
+                    format_func=lambda x: x[1],
+                    help="اختر جميع اللغات الموجودة في الملف للحصول على أفضل النتائج"
+                )
+                st.session_state.settings['manual_langs'] = [lang[0] for lang in st.session_state.settings['manual_langs']]
+
+        # Page range selection
+        st.divider()
+        st.subheader("نطاق الصفحات")
         col1, col2 = st.columns(2)
         with col1:
             process_all = st.checkbox("تحويل كل الصفحات", value=True, key='process_all')
         
         if not process_all:
             with col2:
-                page_range = st.text_input(
+                st.session_state.page_range = st.text_input(
                     "حدد نطاق الصفحات (مثال: 1-3 أو 1,2,3 أو 1-3,5-7)",
                     help="""
                     يمكنك تحديد الصفحات بعدة طرق:
@@ -130,20 +164,14 @@ def create_processing_tabs():
                     - مزيج: مثل '1-3,5,7-9' لتحويل مجموعة من النطاقات والصفحات
                     """
                 )
-        else:
-            page_range = None
 
+        # Advanced settings tabs
+        st.divider()
+        st.subheader("إعدادات متقدمة")
         tab1, tab2, tab3 = st.tabs(["إعدادات OCR", "تحسين النص", "إعدادات الإخراج"])
         
         with tab1:
             st.session_state.settings['use_ocr'] = st.toggle("استخدام OCR", value=st.session_state.settings['use_ocr'])
-            st.session_state.settings['auto_detect_lang'] = st.toggle("كشف تلقائي للغة", value=st.session_state.settings['auto_detect_lang'])
-            if not st.session_state.settings['auto_detect_lang']:
-                st.session_state.settings['manual_langs'] = st.multiselect(
-                    "اختر اللغات",
-                    ['eng', 'ara', 'fra', 'deu'],
-                    default=st.session_state.settings['manual_langs']
-                )
             st.session_state.settings['enhance_images'] = st.toggle("تحسين جودة الصور", value=st.session_state.settings['enhance_images'])
             
         with tab2:
@@ -198,7 +226,6 @@ def clear_results():
     """Clear all conversion results and temporary files"""
     if 'current_pdf_path' in st.session_state:
         # Delete temporary image files
-        import glob
         for img_file in glob.glob(f"{st.session_state.current_pdf_path}_page_*.png"):
             try:
                 os.remove(img_file)
@@ -209,6 +236,8 @@ def clear_results():
     st.session_state.converted_pages = []
     st.session_state.current_pdf_path = None
     st.session_state.processing = False
+    if 'page_range' in st.session_state:
+        del st.session_state.page_range
     st.success("تم مسح جميع النتائج")
 
 def toggle_theme():
