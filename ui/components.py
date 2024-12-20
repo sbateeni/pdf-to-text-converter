@@ -1,6 +1,9 @@
 import streamlit as st
 import os
 import glob
+from pathlib import Path
+from utils.pdf_processing import convert_pdf_to_images_and_text
+from utils.text_processing import format_text
 
 def init_session_state():
     """Initialize session state with default values"""
@@ -139,19 +142,24 @@ def process_pdf():
     """Process the PDF file and store results"""
     try:
         if st.session_state.current_pdf_path:
-            # Convert PDF to images and text
-            text, total_pages, page_languages, pages_processed = convert_pdf_to_images_and_text(
-                st.session_state.current_pdf_path,
-                languages=st.session_state.settings['manual_langs'] if not st.session_state.settings['auto_detect_lang'] else None
-            )
-            
-            # Split text into pages and store in session state
-            pages = text.split('\n--- Page')
-            st.session_state.converted_pages = [page.strip() for page in pages if page.strip()]
-            
-            # Show success message and navigation button
-            st.success(f"تم تحويل {total_pages} صفحات بنجاح!")
-            st.button("عرض النتائج", on_click=lambda: st.switch_page("pages/5_📖_Text_Viewer.py"))
+            with st.spinner("جاري تحويل PDF إلى نص..."):
+                # Convert PDF to images and text
+                text, total_pages, page_languages, pages_processed = convert_pdf_to_images_and_text(
+                    st.session_state.current_pdf_path,
+                    languages=st.session_state.settings['manual_langs'] if not st.session_state.settings['auto_detect_lang'] else None
+                )
+                
+                # Format text if needed
+                if st.session_state.settings['remove_extra_spaces']:
+                    text = " ".join(text.split())
+                
+                # Split text into pages and store in session state
+                pages = text.split('\n--- Page')
+                st.session_state.converted_pages = [page.strip() for page in pages if page.strip()]
+                
+                # Show success message and navigation button
+                st.success(f"تم تحويل {total_pages} صفحات بنجاح!")
+                st.button("عرض النتائج", on_click=lambda: st.switch_page("pages/5_📖_Text_Viewer.py"))
     except Exception as e:
         st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
     finally:
